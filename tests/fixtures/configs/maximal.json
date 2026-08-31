@@ -1,0 +1,108 @@
+{
+  "$schema": "https://schema.shellwright.dev/appconfig/v1.json",
+  "schemaVersion": 1,
+  "app": {
+    "name": "Acme Orders",
+    "bundleId": "com.acme.orders",
+    "versionName": "1.4.0",
+    "versionCode": 42,
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com", "https://acme.com", "https://help.acme.com"]
+  },
+  "branding": {
+    "icon": "asset://sha256-1111111111111111111111111111111111111111111111111111111111111111",
+    "splash": {
+      "backgroundColor": "#0B1220",
+      "logo": "asset://sha256-2222222222222222222222222222222222222222222222222222222222222222",
+      "dark": {
+        "backgroundColor": "#000000",
+        "logo": "asset://sha256-3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    },
+    "theme": { "primary": "#2563EB", "navBar": "#FFFFFF", "tabBar": "#FFFFFF", "statusBar": "dark-content" },
+    "darkMode": "system"
+  },
+  "navigation": {
+    "topBar": {
+      "enabled": true,
+      "titleSource": "documentTitle",
+      "actions": [
+        { "id": "share", "type": "share", "label": "Share this page" },
+        { "id": "refresh", "type": "refresh", "label": "Reload" },
+        { "id": "help", "type": "custom", "label": "Help", "icon": "life-buoy" }
+      ]
+    },
+    "tabBar": {
+      "enabled": true,
+      "items": [
+        { "id": "home", "label": "Home", "icon": "home", "url": "/", "activePattern": "^/$" },
+        { "id": "orders", "label": "Orders", "icon": "package", "url": "/orders", "activePattern": "^/orders" },
+        { "id": "scan", "label": "Scan", "icon": "scan-line", "url": "/scan", "activePattern": "^/scan" },
+        { "id": "account", "label": "Account", "icon": "user", "url": "/account", "activePattern": "^/account" }
+      ]
+    },
+    "drawer": {
+      "enabled": true,
+      "items": [
+        { "id": "settings", "label": "Settings", "icon": "settings", "url": "/settings", "section": "You" },
+        { "id": "support", "label": "Support", "icon": "life-buoy", "url": "https://help.acme.com", "section": "Help" },
+        { "id": "about", "label": "About", "icon": "info", "url": "/about", "section": "Help" }
+      ]
+    }
+  },
+  "linkRules": [
+    { "id": "app", "pattern": "^https://app\\.acme\\.com", "action": "internal" },
+    { "id": "help", "pattern": "^https://help\\.acme\\.com", "action": "readerModal" },
+    { "id": "blocked", "pattern": "^https://ads\\.example\\.com", "action": "block" },
+    { "id": "fallback", "pattern": ".*", "action": "externalBrowser" }
+  ],
+  "webOverrides": {
+    "userAgentSuffix": "AcmeApp/1.4.0",
+    "headers": { "X-Client": "mobile-app", "X-Client-Version": "1.4.0" },
+    "injectCss": "asset://sha256-4444444444444444444444444444444444444444444444444444444444444444",
+    "injectJs": "asset://sha256-5555555555555555555555555555555555555555555555555555555555555555",
+    "persistCookies": true,
+    "allowZoom": false,
+    "pullToRefresh": true
+  },
+  "offline": {
+    "enabled": true,
+    "offlinePage": "asset://sha256-6666666666666666666666666666666666666666666666666666666666666666",
+    "fallbackBundle": "auto"
+  },
+  "nativeSurfaces": [
+    {
+      "id": "welcome",
+      "type": "onboarding",
+      "showOnce": true,
+      "config": { "slides": [{ "title": "Welcome to Acme" }] }
+    },
+    { "id": "prefs", "type": "settings", "showOnce": false, "config": { "sections": [{ "title": "Notifications" }] } }
+  ],
+  "plugins": {
+    "push": { "provider": "shellwright", "promptOnLaunch": false },
+    "biometric": { "promptReason": "Unlock Acme" },
+    "qr-scanner": { "formats": ["qr", "ean13"], "beepOnScan": true, "torchButton": true },
+    "haptics": {},
+    "iap": { "productsUrl": "https://app.acme.com/iap-products.json" }
+  },
+  "ota": { "enabled": true, "channel": "production", "rolloutPercent": 100 },
+  "deepLinks": { "universalLinks": ["app.acme.com", "acme.com"], "customScheme": "acme" },
+  "permissions": {
+    "camera": true,
+    "microphone": false,
+    "photoLibrary": true,
+    "location": "whenInUse",
+    "notifications": true,
+    "contacts": false,
+    "calendar": false,
+    "biometric": true
+  },
+  "build": {
+    "android": { "minSdk": 24, "targetSdk": 36 },
+    "ios": { "minVersion": "15.0" },
+    "orientation": "any",
+    "maximumWindows": 3
+  },
+  "x-acme": { "internalTicket": "ACME-1421" }
+}

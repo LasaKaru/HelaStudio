@@ -1,0 +1,67 @@
+{
+  "all-plugins.json": {
+    "codeKey": "62986acf676e5ccf74b269434fca10716810333a0a0ddf2d2919788189d69f5f",
+    "assetKey": "908ef0839952b1bd962f6aea4920cf7c50d62823c3d6afe2fcc41e160b151967",
+    "contentKey": "f14949370b3e435533540088344de2f1a58354b103515d34785be649fb8f9ca8"
+  },
+  "edge-deep-nesting.json": {
+    "codeKey": "b79f00dc9c7df2113b9bd49d07a98e6112db0d137b41c93dbecdba2e5e330787",
+    "assetKey": "c1020675f8b3f89bbb6e699845e11b4aa60fa034727085983a6f02ef6097481f",
+    "contentKey": "4e8b9a4364edd2bea0be63a59e8c02536d7c2d45a79a1497c7d0d376678fd504"
+  },
+  "edge-long-bundleid.json": {
+    "codeKey": "46bf7915d8595e568a87d95f1529f79261536bde9e964d762cde0ef7e5f116db",
+    "assetKey": "74750cb8453c993c93a911673853c5767dc2c1c76ce2e1e59492474941873917",
+    "contentKey": "90be8879b7bcaadc2b242d0190f9dece3078dd9fe8f10e442a4ca774e745f544"
+  },
+  "edge-many-linkrules.json": {
+    "codeKey": "dbca4465ffbf17e827de316764ad55580df4e7cbdca1c281c8fc758e82bce01b",
+    "assetKey": "ac4ee2a7d29f8ec20abab878a28ccbde65bb3385ac455126663fcec6c4670211",
+    "contentKey": "6337fbbd68527405e9037b484fda4f91b41c406268b07414135b0f1903b614fe"
+  },
+  "edge-many-tabs.json": {
+    "codeKey": "778b9ee1e1cc141e0facf043cceb9b082bb79fbca6c5765efa6f1661f3f01390",
+    "assetKey": "50209a769736e4b8bce8a326f41a1ebbc9b2d0e0c5eafbddb725f3a9bc6533d7",
+    "contentKey": "5d006770d92c2702c1283692852387ef4e920215b74429ca7f52b2114b81d483"
+  },
+  "edge-no-tabs.json": {
+    "codeKey": "516fda4496ee6408fd92bc75961056725659d64a406a2cd99bda768c58ab88a6",
+    "assetKey": "1ea6da76f0213eed968f195116729a13f3395a03c7deb786ccf8a93a9a47af9c",
+    "contentKey": "3e23c4809dc7b55c259337854746f002b1c483c8d71c81b98b2609b836702780"
+  },
+  "edge-single-page.json": {
+    "codeKey": "cea42541811917b2220706fb9f806ea40edcbc9995a5d6a9c6aaf7b7e194dba2",
+    "assetKey": "56f8bfe3cce912d332a9cda7d27c3b69277e2bb10b7c6956b79f045508174f59",
+    "contentKey": "cee60705127d74e872cb524d65110a24986864bafe706eb5c1782a156409f73c"
+  },
+  "invalid-CFG_LINK_RULE_NO_CATCHALL.json": {
+    "codeKey": "c5a28f0560c73dde7cc72ebda4ded1a03deba4bb934ba1813d9ef316b4e504df",
+    "assetKey": "8256061c8c4079824dca26a29e5a1ece26cfc5ce36dfe9f7ce11b8a4a6af93f5",
+    "contentKey": "e521f1fee32fcae3f3ceedb608d33bb951c9b163d5e051e0bba2c50301fb112b"
+  },
+  "invalid-CFG_LINK_RULE_UNREACHABLE.json": {
+    "codeKey": "c36a33e0828f8c183d48e38ead3d5fa36ede2ee04b860f0ed26c363864e77c93",
+    "assetKey": "e42606ee3e4128ebddc927e38b65599493a50c39cfb3ca10a1264c8d2b9ac9f6",
+    "contentKey": "8e3cce4acd3a7a5bf353965573a34a48696f2f54b05430bdc7864ed38d6d0294"
+  },
+  "invalid-CFG_PERMISSION_UNJUSTIFIED.json": {
+    "codeKey": "0c26e1ec2b75993f9edd395fb837c45e4ae7a0cf0045c010b85fdd2fd44791ed",
+    "assetKey": "6eee57dc428d15821627c8fe46c8beb3f7e8cad418170b69c097b4ff557ac28a",
+    "contentKey": "f14949370b3e435533540088344de2f1a58354b103515d34785be649fb8f9ca8"
+  },
+  "maximal.json": {
+    "codeKey": "c6a320486b6427b601847f0ae554cdb7eeacb046ffb20092ee6368c0d6d60052",
+    "assetKey": "0dbdcd97b8154603a99831eeb34df920cc5b807553e8c125459d6b88150b09c6",
+    "contentKey": "97f972e3ba07ea33f73b24a2686bbb16edf651138280f01383a0bd7818c051e6"
+  },
+  "minimal.json": {
+    "codeKey": "0e27c1f780878051b221bbad1b7e36f662719b8919d277d152a96b590c76bf94",
+    "assetKey": "8af201bbfd6d48753f7cd620939b43d15a938ecfe1dc73e1a416a9bc15971d06",
+    "contentKey": "8223684e8064a91e1b6b0379b6747c443fb4c3d0a17f4ae0c0406cdf09961547"
+  },
+  "unicode.json": {
+    "codeKey": "8d4aabba0c3b2d735b7d9feac813083156d067034d909a3049be030e68921c3d",
+    "assetKey": "fd6d6ede6ee05ee34b213c8a99297b6cd3c202471809d3f9068e128b3f632e04",
+    "contentKey": "2bee4dbc67579fc32188a8142c2ed8fc10ad024a5da4eac2833849a27f45c1c9"
+  }
+}

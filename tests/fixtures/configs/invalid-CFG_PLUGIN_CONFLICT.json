@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Plugin Conflict",
+    "bundleId": "dev.shellwright.pluginconflict",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "plugins": {
+    "qr-scanner": {},
+    "scandit-scanner": {}
+  },
+  "permissions": {
+    "camera": true
+  },
+  "build": {
+    "android": {
+      "minSdk": 26
+    },
+    "ios": {
+      "minVersion": "16.0"
+    }
+  }
+}

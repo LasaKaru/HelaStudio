@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.shellwright.dev/appconfig/v1.json",
+  "schemaVersion": 1,
+  "app": {
+    "name": "Minimal",
+    "bundleId": "dev.shellwright.minimal",
+    "initialUrl": "https://simple.fixtures.shellwright.dev",
+    "allowedOrigins": ["https://simple.fixtures.shellwright.dev"]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Many Tabs",
+    "bundleId": "dev.shellwright.manytabs",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "tabBar": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "tab-1",
+          "label": "Tab 1",
+          "url": "/section-1"
+        },
+        {
+          "id": "tab-2",
+          "label": "Tab 2",
+          "url": "/section-2"
+        },
+        {
+          "id": "tab-3",
+          "label": "Tab 3",
+          "url": "/section-3"
+        },
+        {
+          "id": "tab-4",
+          "label": "Tab 4",
+          "url": "/section-4"
+        },
+        {
+          "id": "tab-5",
+          "label": "Tab 5",
+          "url": "/section-5"
+        },
+        {
+          "id": "tab-6",
+          "label": "Tab 6",
+          "url": "/section-6"
+        },
+        {
+          "id": "tab-7",
+          "label": "Tab 7",
+          "url": "/section-7"
+        },
+        {
+          "id": "tab-8",
+          "label": "Tab 8",
+          "url": "/section-8"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}

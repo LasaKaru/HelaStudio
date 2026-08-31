@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SPA fixture</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+      nav a {
+        margin-right: 12px;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .marker {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+      }
+      .tall {
+        height: 200vh;
+        background: linear-gradient(#eee, #999);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a data-route="/">Home</a><a data-route="/orders">Orders</a> <a data-route="/upload">Upload</a
+      ><a data-route="/long">Long</a>
+      <a data-route="/boom">Throw an error</a>
+    </nav>
+    <main id="view"></main>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,46 @@
+# Secret scanning. Beyond the default ruleset we add the shapes specific to this
+# product: Apple signing material and Google service accounts. A leak of any of
+# these is, per the master spec §1.4, company-ending.
+title = "Shellwright gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "apple-p8-private-key"
+description = "Apple App Store Connect API key (.p8 / PKCS#8 private key)"
+regex = '''-----BEGIN PRIVATE KEY-----'''
+tags = ["apple", "signing", "key"]
+
+[[rules]]
+id = "apple-p12-marker"
+description = "PKCS#12 signing certificate committed as text"
+regex = '''-----BEGIN (ENCRYPTED |RSA |EC )?PRIVATE KEY-----'''
+tags = ["apple", "signing", "key"]
+
+[[rules]]
+id = "apple-asc-key-id"
+description = "App Store Connect key identifier alongside an issuer id"
+regex = '''(?i)(asc|appstoreconnect)[_-]?(key[_-]?id|issuer[_-]?id)\s*[:=]\s*['"]?[A-Z0-9]{8,10}['"]?'''
+tags = ["apple", "asc"]
+
+[[rules]]
+id = "google-service-account-json"
+description = "Google service account key JSON"
+regex = '''"type"\s*:\s*"service_account"'''
+tags = ["google", "play", "key"]
+
+[[rules]]
+id = "android-keystore-password"
+description = "Android keystore or key password in a properties file"
+regex = '''(?i)(store|key)Password\s*[:=]\s*['"]?[^\s'"]{4,}'''
+path = '''\.(properties|gradle|kts)$'''
+tags = ["android", "signing"]
+
+[allowlist]
+description = "Fixtures and documentation deliberately contain fake-shaped secrets."
+paths = [
+  '''tests/fixtures/secrets/.*''',
+  '''docs/reference/diagnostics\.md''',
+  '''\.gitleaks\.toml''',
+]

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Uncovered Origin",
+    "bundleId": "dev.shellwright.uncovered",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        },
+        {
+          "id": "partner",
+          "label": "Partner",
+          "url": "https://partner.example.com/portal"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}
