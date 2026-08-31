@@ -79,7 +79,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./gradlew :app:assembleRelease      # R8 full mode, resource shrinking
 ```
 
-The wrapper pins Gradle by version *and* checksum. Use it rather than a system
+The wrapper pins Gradle by version _and_ checksum. Use it rather than a system
 `gradle`, so that what CI builds is what you built.
 
 The app reads `app/src/main/assets/appconfig.json`. Swapping that file changes

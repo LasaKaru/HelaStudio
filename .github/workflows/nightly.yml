@@ -41,4 +41,3 @@ jobs:
       # over time so a slow drift is visible before it breaches.
       - name: Performance budgets
         run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
-

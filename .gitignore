@@ -18,6 +18,7 @@ BenchmarkDotNet.Artifacts/
 
 # ── Android ────────────────────────────────────────────────────────────
 .gradle/
+.kotlin/
 local.properties
 captures/
 *.hprof
