@@ -73,10 +73,14 @@ Asserted, not aspirational (`03_TEST_STRATEGY.md` §12):
 
 ```bash
 export ANDROID_HOME=/path/to/android-sdk
-gradle :app:assembleDebug        # debug APK
-gradle :app:testDebugUnitTest    # JVM unit tests, no device needed
-gradle :app:assembleRelease      # R8 full mode, resource shrinking
+./gradlew :app:assembleDebug        # debug APK
+./gradlew :app:testDebugUnitTest    # JVM unit tests, no device needed
+./gradlew :app:lintDebug            # lint, with warnings as errors
+./gradlew :app:assembleRelease      # R8 full mode, resource shrinking
 ```
+
+The wrapper pins Gradle by version *and* checksum. Use it rather than a system
+`gradle`, so that what CI builds is what you built.
 
 The app reads `app/src/main/assets/appconfig.json`. Swapping that file changes
 the app with no code change — which is the entire premise, and worth verifying

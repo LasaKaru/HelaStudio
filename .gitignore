@@ -57,3 +57,7 @@ Thumbs.db
 
 # ── Android SDK location, machine-specific ────────────────────────────
 shells/*/local.properties
+
+# The Gradle wrapper jar is committed on purpose: it pins the Gradle version
+# and its checksum, so CI builds with exactly what a developer builds with.
+!shells/android/gradle/wrapper/gradle-wrapper.jar

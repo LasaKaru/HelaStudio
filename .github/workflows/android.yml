@@ -53,13 +53,13 @@ jobs:
       # Unit tests read the shared fixture corpus, so the shell and the
       # validator can never disagree about what a valid config looks like.
       - name: Unit tests
-        run: gradle :app:testDebugUnitTest --console=plain
+        run: ./gradlew :app:testDebugUnitTest --console=plain
 
       - name: Lint
-        run: gradle :app:lintDebug --console=plain
+        run: ./gradlew :app:lintDebug --console=plain
 
       - name: Release build
-        run: gradle :app:assembleRelease --console=plain
+        run: ./gradlew :app:assembleRelease --console=plain
 
       # TC-S02-PRF-002 — a budget that is checked is a budget. Binary size is
       # the one users feel and the one nobody notices creeping.
