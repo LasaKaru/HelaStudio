@@ -1,0 +1,92 @@
+name: Android shell
+
+# Split out from ci.yml because the Android toolchain is slow to set up and
+# irrelevant to most changes. Path-filtered so a schema edit does not pay for it.
+on:
+  pull_request:
+    paths:
+      - 'shells/android/**'
+      - 'tests/fixtures/configs/**'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'shells/android/**'
+      - '.github/workflows/android.yml'
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: shells/android
+
+jobs:
+  build:
+    name: Build and unit test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Only the default branch writes the cache; pull requests read it.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Unit tests read the shared fixture corpus, so the shell and the
+      # validator can never disagree about what a valid config looks like.
+      - name: Unit tests
+        run: gradle :app:testDebugUnitTest --console=plain
+
+      - name: Lint
+        run: gradle :app:lintDebug --console=plain
+
+      - name: Release build
+        run: gradle :app:assembleRelease --console=plain
+
+      # TC-S02-PRF-002 — a budget that is checked is a budget. Binary size is
+      # the one users feel and the one nobody notices creeping.
+      - name: APK size budget
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          BYTES=$(stat -c%s "$APK")
+          LIMIT=$((12 * 1024 * 1024))
+          echo "APK: $APK"
+          echo "Size: $((BYTES / 1024)) kB against a $((LIMIT / 1024)) kB budget"
+          if [ "$BYTES" -gt "$LIMIT" ]; then
+            echo "::error::Release APK is over the 12 MB budget. Raising it needs an explicit, justified decision in the pull request — not a quiet edit to this number."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-results
+          path: shells/android/app/build/reports/
+          if-no-files-found: ignore
+
+  planned:
+    name: Planned once a device is available
+    runs-on: ubuntu-latest
+    steps:
+      - name: What lands here
+        run: |
+          cat <<'NOTE'
+          Still to add, and blocked only on emulator time:
+            Espresso smoke suite against the three fixture sites
+            Macrobenchmark cold-start budget (TC-S02-PRF-001, under 300 ms)
+            Instrumented security checks (TC-S02-SEC-001, TC-S02-SEC-002)
+          Run these with reactivecircus/android-emulator-runner. Unmetered once
+          the shell moves to its own public repository — see ADR 0002.
+          NOTE

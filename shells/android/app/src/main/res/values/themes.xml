@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Shellwright" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      The Android 12+ splash API. The splash is dismissed when the native
+      skeleton is drawn, not when the web content arrives — waiting for the web
+      would put a blank frame between the two.
+    -->
+    <style name="Theme.Shellwright.Splash" parent="Theme.Shellwright">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+</resources>

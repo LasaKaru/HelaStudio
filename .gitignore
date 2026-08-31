@@ -54,3 +54,6 @@ Thumbs.db
 
 # ── Verify (snapshot testing) rejected output ──────────────────────────
 *.received.*
+
+# ── Android SDK location, machine-specific ────────────────────────────
+shells/*/local.properties

@@ -258,3 +258,19 @@ Recorded 2026-08-31. Test counts are from the suites that gate CI.
 Of the C# total, 87 are the cross-language contract: for each of the 29 fixtures,
 the diagnostics, the canonical form, and all three cache keys must match the
 committed goldens exactly.
+
+### Sprint 02 — as built
+
+| Task   | Deliverable                                     | Verified by                                                | Status                                                                    |
+| ------ | ----------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| T-02.1 | Project skeleton, size and startup optimisation | `TC-S02-AND-001`, `TC-S02-PRF-002`                         | ✅ release APK 0.80 MB against a 12 MB budget                             |
+| T-02.2 | Config loading and runtime model                | `TC-S02-AND-002`, `TC-S02-AND-003`, `TC-S02-PRF-003`       | ✅ two-phase parse, unknown keys ignored                                  |
+| T-02.3 | WebView host with hardening                     | `TC-S02-AND-004`…`012`, `TC-S02-SEC-001`, `TC-S02-SEC-002` | ◐ hardening and routing unit-tested; the instrumented cases need a device |
+| T-02.4 | Native chrome                                   | `TC-S02-AND-013`…`020`                                     | ◐ built and lint-clean; UI tests need an emulator                         |
+| T-02.5 | Link routing engine                             | `TC-S02-AND-021`…`028`, `TC-S02-PRF-004`                   | ✅ 68 unit tests including the per-navigation budget                      |
+| T-02.6 | Connectivity, offline page, error handling      | `TC-S02-AND-029`…`034`                                     | ◐ built; airplane-mode cases need a device                                |
+| T-02.7 | Test suite                                      | `TC-S02-PRF-001`                                           | ◐ JVM suite green in CI; Espresso and Macrobenchmark need an emulator     |
+
+Android suite: **68 tests**, 0 failures.
+
+Programme total: **396 tests** — 195 TypeScript, 133 C#, 68 Kotlin.

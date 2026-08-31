@@ -57,3 +57,38 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
 | Hash the maximal fixture        | 5 ms   | 0.22 ms  |
 | Validate 200 link rules         | 50 ms  | 2.8 ms   |
 | Studio initial bundle (gzipped) | 200 kB | 109 kB   |
+
+#### Sprint 02 — Android shell (in progress)
+
+- Config-driven Kotlin shell: two-phase startup parse, hardened WebView, native
+  top bar and tab bar, link routing, connectivity and offline handling.
+- `FastConfigReader` — a hand-written scanner that reads only what the first
+  frame needs, so the native skeleton is drawn before the full config is parsed.
+- `SafeRegex` — a character-budget interrupt so a user-supplied pattern cannot
+  hang the UI thread on a device, defending even though Sprint 01 rejects the
+  worst at config time.
+- `OriginAllowlist` — the security boundary the JavaScript bridge will be gated
+  on in Sprint 09, built before there is anything privileged to gate.
+- WebView hardening: file and content access off, universal file access off,
+  mixed content never allowed, user agent appended rather than replaced.
+- Offline page bundled as an asset and themed at load time, shown only for
+  network-level failures so a site's own 404 still renders.
+- Renderer-process death recovers by rebuilding the web view instead of taking
+  the app down with it.
+- 68 JVM unit tests, including the link-routing and first-frame-parse budgets.
+
+### Changed
+
+- `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
+  advisory.
+- `@size-limit/preset-app` replaced with `@size-limit/file`. The preset pulled
+  headless Chrome to estimate execution time; the budget that matters is
+  transfer size, and dropping it removed three more advisories.
+
+### Fixed
+
+- The C# canonicaliser was not NFC-normalising at all, because
+  `InvariantGlobalization=true` makes `String.Normalize` a silent no-op for
+  non-ASCII. A decomposed accent would have hashed differently in each language.
+- `RenderProcessGoneDetail#didCrash` is API 26 and `minSdk` is 24, so renderer
+  recovery would have crashed on Android 7.

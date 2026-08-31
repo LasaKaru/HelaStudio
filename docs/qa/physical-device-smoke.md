@@ -44,3 +44,25 @@ Becomes executable from Sprint 02, when the Android shell exists.
 - [ ] Full TalkBack traversal reaches every control
 - [ ] 200% text size does not clip or overlap
 - [ ] Tap targets are at least 44 points
+
+---
+
+## Sprint 02 additions
+
+The Android shell exists now, so these are runnable rather than aspirational.
+Each maps to a Sprint 02 test case that cannot be automated without hardware.
+
+- [ ] `TC-S02-AND-004` — the start URL loads and the page title reaches the app bar
+- [ ] `TC-S02-AND-009` — sign in on the auth fixture, kill the app from recents,
+      relaunch: still signed in
+- [ ] `TC-S02-AND-012` — tap the file input on the SPA fixture, choose an image,
+      confirm it uploads
+- [ ] `TC-S02-AND-016` — tap the selected tab again: scrolls to top, does not reload
+- [ ] `TC-S02-AND-030` — airplane mode, then navigate: the offline page appears
+- [ ] `TC-S02-AND-031` — leave airplane mode: the failed page retries by itself
+- [ ] `TC-S02-AND-032` — request a URL the site 404s: **the site's own 404**
+      renders, not our offline page
+- [ ] `TC-S02-AND-034` — kill the WebView renderer process: the app rebuilds and
+      reloads rather than crashing
+- [ ] `TC-S02-SEC-001` — navigate to `file:///data/data/<pkg>/`: refused
+- [ ] `TC-S02-SEC-002` — load a page with an `http://` sub-resource: blocked
