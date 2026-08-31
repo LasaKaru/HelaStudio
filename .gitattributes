@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.keystore binary
+*.jks binary
+*.p12 binary
+*.mobileprovision binary
+*.aab binary
+*.apk binary
+*.ipa binary
+
+# Approved snapshots: diffs are reviewed via the test runner, not the SCM.
+tests/**/__snapshots__/** -diff
+**/*.verified.txt linguist-generated
+**/*.received.* linguist-generated
+pnpm-lock.yaml -diff linguist-generated

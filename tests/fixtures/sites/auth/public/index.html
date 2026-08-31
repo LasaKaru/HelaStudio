@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth fixture</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+      .marker {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #7c3aed;
+        color: #fff;
+        font-weight: 600;
+      }
+      label {
+        display: block;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="marker">AUTH SIGN IN</p>
+    <p>
+      Cookie session fixture. Any credentials are accepted; the point is the cookie, not the check.
+    </p>
+    <form method="POST" action="/api/login">
+      <label>Email <input name="email" type="email" value="it@example.com" required /></label>
+      <label>Password <input name="password" type="password" value="hunter2" required /></label>
+      <button type="submit">Sign in</button>
+    </form>
+    <p><a href="/protected.html">Go to the protected page</a></p>
+    <p><a href="/oauth/start">Start the mock OAuth redirect chain</a></p>
+  </body>
+</html>

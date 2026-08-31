@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Bad Plugin Config",
+    "bundleId": "dev.shellwright.badplugincfg",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "plugins": {
+    "qr-scanner": {
+      "beepOnScan": "yes"
+    }
+  },
+  "permissions": {
+    "camera": true
+  }
+}

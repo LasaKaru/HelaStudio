@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Protected</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+      .marker {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #059669;
+        color: #fff;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="marker">AUTH PROTECTED</p>
+    <p id="state">Checking the session...</p>
+    <p><a href="/api/logout">Sign out</a></p>
+    <script>
+      // The session cookie is HttpOnly, so the page asks the server rather than
+      // reading document.cookie. This is what makes the fixture a real test of
+      // cookie persistence across app launches.
+      fetch('/api/session', { credentials: 'include' })
+        .then((r) => r.json())
+        .then((s) => {
+          document.getElementById('state').textContent = s.signedIn
+            ? `Signed in as ${s.email}`
+            : 'Not signed in.';
+        })
+        .catch(() => {
+          document.getElementById('state').textContent = 'Session check failed.';
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,162 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --error: #b91c1c;
+  --warning: #b45309;
+  --info: #1d4ed8;
+  --ok: #047857;
+  --surface: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --line: #1f2937;
+    --error: #f87171;
+    --warning: #fbbf24;
+    --info: #93c5fd;
+    --ok: #34d399;
+    --surface: #111827;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    15px/1.55 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+h1 {
+  font-size: 1.35rem;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+.lede {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+
+.split {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.editor textarea {
+  width: 100%;
+  min-height: 60vh;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  font:
+    13px/1.6 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  resize: vertical;
+}
+
+.timing {
+  color: var(--muted);
+  margin: 0 0 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.diagnostics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostic {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.diagnostic p {
+  margin: 6px 0;
+}
+.diagnostic.error {
+  border-left-color: var(--error);
+}
+.diagnostic.warning {
+  border-left-color: var(--warning);
+}
+.diagnostic.info {
+  border-left-color: var(--info);
+}
+.diagnostic.ok {
+  border-left-color: var(--ok);
+}
+
+.path {
+  font:
+    12px ui-monospace,
+    monospace;
+  color: var(--muted);
+}
+.diagnostic a {
+  font:
+    12px ui-monospace,
+    monospace;
+  color: var(--info);
+}
+
+.hashes {
+  margin: 20px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  font:
+    13px ui-monospace,
+    monospace;
+}
+.hashes dt {
+  color: var(--muted);
+}
+.hashes dd {
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

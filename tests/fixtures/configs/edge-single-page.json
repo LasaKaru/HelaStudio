@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Just A Website",
+    "bundleId": "dev.shellwright.justawebsite",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}

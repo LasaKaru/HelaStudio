@@ -1,0 +1,803 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.shellwright.dev/appconfig/v1.json",
+  "title": "Shellwright app configuration",
+  "description": "The single source of truth for a generated app. Every native project, cache key, and studio form is derived from this document.",
+  "type": "object",
+  "required": ["schemaVersion", "app"],
+  "unevaluatedProperties": false,
+  "properties": {
+    "$schema": {
+      "title": "Schema URL",
+      "description": "Points editors at the schema so hand-written configs get autocomplete and inline help.",
+      "type": "string",
+      "format": "uri",
+      "examples": ["https://schema.shellwright.dev/appconfig/v1.json"]
+    },
+    "schemaVersion": {
+      "title": "Schema version",
+      "description": "Which version of this schema the document was written against. Drives migration; never edit by hand.",
+      "type": "integer",
+      "const": 1,
+      "examples": [1]
+    },
+    "app": { "$ref": "#/$defs/App" },
+    "branding": { "$ref": "#/$defs/Branding" },
+    "navigation": { "$ref": "#/$defs/Navigation" },
+    "linkRules": {
+      "title": "Link rules",
+      "description": "Ordered rules deciding where each link opens. The first matching rule wins, so put specific patterns above general ones and end with a catch-all.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/LinkRule" },
+      "maxItems": 500,
+      "default": []
+    },
+    "webOverrides": { "$ref": "#/$defs/WebOverrides" },
+    "offline": { "$ref": "#/$defs/Offline" },
+    "nativeSurfaces": {
+      "title": "Native surfaces",
+      "description": "Fully native screens rendered outside the web view, such as onboarding or a settings page. These are what make the app more than a repackaged website.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/NativeSurface" },
+      "maxItems": 20,
+      "default": []
+    },
+    "plugins": {
+      "title": "Plugins",
+      "description": "Native capabilities to include, keyed by plugin id. Each value is validated against that plugin's own configuration schema.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/PluginId" },
+      "additionalProperties": { "type": "object" },
+      "default": {}
+    },
+    "ota": { "$ref": "#/$defs/Ota" },
+    "deepLinks": { "$ref": "#/$defs/DeepLinks" },
+    "permissions": { "$ref": "#/$defs/Permissions" },
+    "build": { "$ref": "#/$defs/Build" }
+  },
+  "patternProperties": {
+    "^x-": {
+      "title": "Extension object",
+      "description": "An escape hatch for data this schema does not model. Ignored by code generation and excluded from every cache key.",
+      "type": "object"
+    }
+  },
+
+  "$defs": {
+    "App": {
+      "title": "App identity",
+      "description": "Who the app is and where it starts. These values appear in the stores and cannot be changed casually after publication.",
+      "type": "object",
+      "required": ["name", "bundleId", "initialUrl"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "name": {
+          "title": "App name",
+          "description": "The name shown under the icon and on your store listing. The App Store truncates beyond 30 characters.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "examples": ["Acme", "Acme Orders"]
+        },
+        "bundleId": {
+          "title": "Bundle identifier",
+          "description": "Reverse-DNS identifier, lowercase only. This is permanent — neither Apple nor Google lets you change it after the first release.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$",
+          "minLength": 2,
+          "maxLength": 155,
+          "examples": ["com.acme.app", "lk.dsityre.orders"]
+        },
+        "versionName": {
+          "title": "Version name",
+          "description": "The version customers see, for example 1.4.0. Up to three dot-separated numbers.",
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+){0,2}$",
+          "default": "1.0.0",
+          "examples": ["1.0.0", "1.4.0", "2.11"]
+        },
+        "versionCode": {
+          "title": "Version code",
+          "description": "The internal build number. Must increase with every store upload; Google Play rejects anything above 2100000000.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2100000000,
+          "default": 1,
+          "examples": [1, 42]
+        },
+        "initialUrl": {
+          "title": "Start URL",
+          "description": "The page the app opens on. Must be https — both platforms block plain http by default.",
+          "$ref": "#/$defs/HttpsUrl",
+          "examples": ["https://app.acme.com"]
+        },
+        "allowedOrigins": {
+          "title": "Allowed origins",
+          "description": "Origins treated as part of your app. The JavaScript bridge is injected only on these, and anything else is treated as an external link.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/HttpsOrigin" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "maxItems": 50,
+          "examples": [["https://app.acme.com", "https://acme.com"]]
+        }
+      }
+    },
+
+    "Branding": {
+      "title": "Branding",
+      "description": "Icon, splash screen, and colours. Changing anything here rebuilds resources only, which is far faster than a full recompile.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "icon": {
+          "title": "App icon",
+          "description": "Source icon, at least 1024x1024, square, with no transparency. Every store density is generated from it.",
+          "$ref": "#/$defs/AssetRef"
+        },
+        "splash": { "$ref": "#/$defs/Splash" },
+        "theme": { "$ref": "#/$defs/Theme" },
+        "darkMode": {
+          "title": "Dark mode",
+          "description": "Whether the app follows the device setting or pins itself to one appearance.",
+          "type": "string",
+          "enum": ["system", "light", "dark"],
+          "default": "system"
+        }
+      }
+    },
+
+    "Splash": {
+      "title": "Splash screen",
+      "description": "What shows while the app starts. Keep it simple — it is on screen for under a second.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "backgroundColor": {
+          "title": "Background colour",
+          "description": "Fills the screen behind the logo.",
+          "$ref": "#/$defs/Color",
+          "default": "#FFFFFF"
+        },
+        "logo": {
+          "title": "Splash logo",
+          "description": "Centred on the splash background, inside the safe area.",
+          "$ref": "#/$defs/AssetRef"
+        },
+        "dark": {
+          "title": "Dark appearance overrides",
+          "description": "Replaces the splash colours when the device is in dark mode.",
+          "type": "object",
+          "unevaluatedProperties": false,
+          "properties": {
+            "backgroundColor": {
+              "$ref": "#/$defs/Color",
+              "title": "Dark background colour",
+              "description": "Splash background used in dark mode."
+            },
+            "logo": {
+              "$ref": "#/$defs/AssetRef",
+              "title": "Dark splash logo",
+              "description": "Splash logo used in dark mode."
+            }
+          }
+        }
+      }
+    },
+
+    "Theme": {
+      "title": "Theme colours",
+      "description": "The native chrome around your website. Match these to your site so the seam is invisible.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "primary": {
+          "$ref": "#/$defs/Color",
+          "title": "Primary colour",
+          "description": "Accent colour for controls, the refresh spinner, and selected tabs.",
+          "default": "#2563EB"
+        },
+        "navBar": {
+          "$ref": "#/$defs/Color",
+          "title": "Top bar colour",
+          "description": "Background of the native top bar.",
+          "default": "#FFFFFF"
+        },
+        "tabBar": {
+          "$ref": "#/$defs/Color",
+          "title": "Tab bar colour",
+          "description": "Background of the native bottom tab bar.",
+          "default": "#FFFFFF"
+        },
+        "statusBar": {
+          "title": "Status bar style",
+          "description": "Controls the colour of the clock and battery icons. Pick the one that contrasts with your top bar.",
+          "type": "string",
+          "enum": ["light-content", "dark-content", "hidden"],
+          "default": "dark-content"
+        }
+      }
+    },
+
+    "Navigation": {
+      "title": "Navigation",
+      "description": "The native chrome. At least one of these should be enabled — an app with no native navigation is very likely to be rejected under App Store guideline 4.2.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "topBar": { "$ref": "#/$defs/TopBar" },
+        "tabBar": { "$ref": "#/$defs/TabBar" },
+        "drawer": { "$ref": "#/$defs/Drawer" }
+      }
+    },
+
+    "TopBar": {
+      "title": "Top bar",
+      "description": "The native bar across the top of the screen.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Show the top bar",
+          "description": "Turn off for a full-bleed layout where your website supplies its own header.",
+          "default": true
+        },
+        "titleSource": {
+          "title": "Title source",
+          "description": "Where the bar's title comes from: the page's title tag, a fixed string, or nothing.",
+          "type": "string",
+          "enum": ["documentTitle", "static", "none"],
+          "default": "documentTitle"
+        },
+        "staticTitle": {
+          "title": "Fixed title",
+          "description": "Used when the title source is set to a fixed string.",
+          "type": "string",
+          "maxLength": 60
+        },
+        "actions": {
+          "title": "Action buttons",
+          "description": "Buttons on the right of the top bar, shown in order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/TopBarAction" },
+          "maxItems": 4,
+          "default": []
+        }
+      }
+    },
+
+    "TopBarAction": {
+      "title": "Top bar action",
+      "type": "object",
+      "required": ["id", "type"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ItemId" },
+        "type": {
+          "title": "Action type",
+          "description": "Built-in actions need no wiring. Choose 'custom' to receive a callback in your JavaScript instead.",
+          "type": "string",
+          "enum": ["share", "refresh", "search", "custom"]
+        },
+        "label": {
+          "$ref": "#/$defs/LocalizedString",
+          "title": "Accessibility label",
+          "description": "Read aloud by screen readers. Required for custom actions."
+        },
+        "icon": { "$ref": "#/$defs/IconRef", "title": "Icon", "description": "Icon shown in the bar." }
+      }
+    },
+
+    "TabBar": {
+      "title": "Bottom tab bar",
+      "description": "The strongest signal to a store reviewer that this is an app rather than a website.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Show the tab bar",
+          "description": "Turn on to show a native bottom tab bar.",
+          "default": false
+        },
+        "items": {
+          "title": "Tabs",
+          "description": "Up to five tabs. iOS collapses anything beyond five into a 'More' tab, which reads poorly.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/TabItem" },
+          "maxItems": 8,
+          "default": []
+        }
+      }
+    },
+
+    "TabItem": {
+      "title": "Tab",
+      "type": "object",
+      "required": ["id", "label", "url"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ItemId" },
+        "label": {
+          "$ref": "#/$defs/LocalizedString",
+          "title": "Tab label",
+          "description": "Keep it to one short word; the tab bar is narrow."
+        },
+        "icon": {
+          "$ref": "#/$defs/IconRef",
+          "title": "Tab icon",
+          "description": "A built-in icon name or an uploaded image."
+        },
+        "url": {
+          "$ref": "#/$defs/UrlOrPath",
+          "title": "Destination",
+          "description": "Where the tab navigates. A path is resolved against your start URL."
+        },
+        "activePattern": {
+          "$ref": "#/$defs/UrlPattern",
+          "title": "Active while",
+          "description": "Regular expression deciding when this tab shows as selected."
+        }
+      }
+    },
+
+    "Drawer": {
+      "title": "Side drawer",
+      "description": "A slide-out menu, useful when you have more destinations than fit in a tab bar.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Show the drawer",
+          "description": "Turn on to add a slide-out navigation menu.",
+          "default": false
+        },
+        "items": {
+          "title": "Menu items",
+          "type": "array",
+          "items": { "$ref": "#/$defs/DrawerItem" },
+          "maxItems": 50,
+          "default": []
+        }
+      }
+    },
+
+    "DrawerItem": {
+      "title": "Drawer item",
+      "type": "object",
+      "required": ["id", "label"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ItemId" },
+        "label": { "$ref": "#/$defs/LocalizedString", "title": "Item label", "description": "Text shown in the menu." },
+        "icon": { "$ref": "#/$defs/IconRef", "title": "Item icon", "description": "Icon shown beside the label." },
+        "url": {
+          "$ref": "#/$defs/UrlOrPath",
+          "title": "Destination",
+          "description": "Where the item navigates. Omit for a section heading."
+        },
+        "section": {
+          "title": "Section",
+          "description": "Groups items under a shared heading in the menu.",
+          "type": "string",
+          "maxLength": 40
+        }
+      }
+    },
+
+    "LinkRule": {
+      "title": "Link rule",
+      "description": "Matches a URL and decides where it opens.",
+      "type": "object",
+      "required": ["id", "pattern", "action"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ItemId" },
+        "pattern": { "$ref": "#/$defs/UrlPattern" },
+        "action": {
+          "title": "Open in",
+          "description": "Where a matching link opens: inside the app, in a modal, in a reader view, in the device browser, or blocked entirely.",
+          "type": "string",
+          "enum": ["internal", "modal", "readerModal", "externalBrowser", "block"]
+        }
+      }
+    },
+
+    "WebOverrides": {
+      "title": "Web overrides",
+      "description": "Adjustments applied to your website when it runs inside the app.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "userAgentSuffix": {
+          "title": "User agent suffix",
+          "description": "Appended to the browser user agent so your server can detect the app.",
+          "type": "string",
+          "maxLength": 120,
+          "pattern": "^[\\x20-\\x7E]*$",
+          "examples": ["AcmeApp/1.4.0"]
+        },
+        "headers": {
+          "title": "Extra request headers",
+          "description": "Sent with every page request the app makes. Never put a secret here — the config is stored, hashed, and exportable.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$", "maxLength": 64 },
+          "additionalProperties": { "type": "string", "maxLength": 1024 },
+          "maxProperties": 20,
+          "default": {}
+        },
+        "injectCss": {
+          "$ref": "#/$defs/AssetRef",
+          "title": "Injected stylesheet",
+          "description": "CSS applied on every page, useful for hiding your website's own header."
+        },
+        "injectJs": {
+          "$ref": "#/$defs/AssetRef",
+          "title": "Injected script",
+          "description": "JavaScript run on every page, after the bridge is available."
+        },
+        "persistCookies": {
+          "title": "Keep users signed in",
+          "description": "Preserves cookies between launches so users are not signed out every time.",
+          "type": "boolean",
+          "default": true
+        },
+        "allowZoom": {
+          "title": "Allow pinch zoom",
+          "description": "Lets users pinch to zoom. Leave off for app-like behaviour, on for accessibility.",
+          "type": "boolean",
+          "default": false
+        },
+        "pullToRefresh": {
+          "title": "Pull to refresh",
+          "description": "Adds the native pull-down gesture to reload the page.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+
+    "Offline": {
+      "title": "Offline behaviour",
+      "description": "What the app does with no connection. A blank screen is a common reason for store rejection.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Handle offline",
+          "description": "Show a branded offline screen instead of a browser error.",
+          "type": "boolean",
+          "default": true
+        },
+        "offlinePage": {
+          "$ref": "#/$defs/AssetRef",
+          "title": "Offline page",
+          "description": "Your own HTML shown when there is no connection."
+        },
+        "fallbackBundle": {
+          "title": "Offline bundle",
+          "description": "Which pages to cache for offline use: none, chosen automatically, or a bundle you supply.",
+          "type": "string",
+          "enum": ["none", "auto", "custom"],
+          "default": "none"
+        }
+      }
+    },
+
+    "NativeSurface": {
+      "title": "Native surface",
+      "type": "object",
+      "required": ["id", "type"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ItemId" },
+        "type": {
+          "title": "Surface type",
+          "description": "Which native screen to render.",
+          "type": "string",
+          "enum": ["onboarding", "settings", "about", "paywall"]
+        },
+        "showOnce": {
+          "title": "Show only once",
+          "description": "Displays on first launch only, then never again.",
+          "type": "boolean",
+          "default": false
+        },
+        "config": {
+          "title": "Surface configuration",
+          "description": "Content for this surface, validated against the surface type's own schema.",
+          "type": "object",
+          "default": {}
+        }
+      }
+    },
+
+    "Ota": {
+      "title": "Over-the-air updates",
+      "description": "Ship web bundle changes without waiting for store review.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enable OTA updates",
+          "description": "Lets the app fetch new web bundles on launch.",
+          "type": "boolean",
+          "default": false
+        },
+        "channel": {
+          "title": "Release channel",
+          "description": "Which stream of updates this build follows.",
+          "type": "string",
+          "enum": ["production", "beta", "development"],
+          "default": "production"
+        },
+        "rolloutPercent": {
+          "title": "Rollout percentage",
+          "description": "Share of users who receive the update. Start small and raise it once you see clean crash numbers.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 100
+        }
+      }
+    },
+
+    "DeepLinks": {
+      "title": "Deep links",
+      "description": "Lets links to your website open directly in the app.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "universalLinks": {
+          "title": "Linked domains",
+          "description": "Domains whose links open in the app. Each needs a verification file hosted at its root.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Hostname" },
+          "uniqueItems": true,
+          "maxItems": 20,
+          "default": []
+        },
+        "customScheme": {
+          "title": "Custom URL scheme",
+          "description": "A private scheme such as 'acme', giving you acme:// links. Lowercase letters and digits only.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9+.-]{1,31}$",
+          "examples": ["acme"]
+        }
+      }
+    },
+
+    "Permissions": {
+      "title": "Permissions",
+      "description": "Device capabilities the app may ask for. Request only what you use — an unjustified permission is a common rejection cause.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "camera": {
+          "title": "Camera",
+          "description": "Needed for photo capture and barcode scanning.",
+          "type": "boolean",
+          "default": false
+        },
+        "microphone": {
+          "title": "Microphone",
+          "description": "Needed for audio recording and video calls.",
+          "type": "boolean",
+          "default": false
+        },
+        "photoLibrary": {
+          "title": "Photo library",
+          "description": "Needed to attach existing photos to web forms.",
+          "type": "boolean",
+          "default": false
+        },
+        "location": {
+          "title": "Location",
+          "description": "Choose 'whenInUse' unless you genuinely track location in the background — 'always' invites extra store scrutiny.",
+          "type": "string",
+          "enum": ["none", "whenInUse", "always"],
+          "default": "none"
+        },
+        "notifications": {
+          "title": "Notifications",
+          "description": "Needed to send push notifications.",
+          "type": "boolean",
+          "default": false
+        },
+        "contacts": {
+          "title": "Contacts",
+          "description": "Needed to read the device address book.",
+          "type": "boolean",
+          "default": false
+        },
+        "calendar": {
+          "title": "Calendar",
+          "description": "Needed to read or add calendar events.",
+          "type": "boolean",
+          "default": false
+        },
+        "biometric": {
+          "title": "Face ID and fingerprint",
+          "description": "Needed to unlock the app with biometrics.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
+    "Build": {
+      "title": "Build settings",
+      "description": "Toolchain and platform floors. Leave these alone unless a plugin requires a change.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "android": {
+          "title": "Android build settings",
+          "type": "object",
+          "unevaluatedProperties": false,
+          "properties": {
+            "minSdk": {
+              "title": "Minimum Android version",
+              "description": "API level 24 is Android 7.0 and covers almost every active device.",
+              "type": "integer",
+              "minimum": 24,
+              "maximum": 40,
+              "default": 24
+            },
+            "targetSdk": {
+              "title": "Target Android version",
+              "description": "Google requires this to stay near the latest release.",
+              "type": "integer",
+              "minimum": 34,
+              "maximum": 40,
+              "default": 36
+            }
+          }
+        },
+        "ios": {
+          "title": "iOS build settings",
+          "type": "object",
+          "unevaluatedProperties": false,
+          "properties": {
+            "minVersion": {
+              "title": "Minimum iOS version",
+              "description": "The oldest iOS release the app installs on.",
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+){0,2}$",
+              "default": "15.0"
+            }
+          }
+        },
+        "orientation": {
+          "title": "Screen orientation",
+          "description": "Which way the app may rotate.",
+          "type": "string",
+          "enum": ["any", "portrait", "landscape"],
+          "default": "any"
+        },
+        "maximumWindows": {
+          "title": "Maximum open windows",
+          "description": "Caps how many modal web views can stack. Each one holds memory, so keep it low.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        }
+      }
+    },
+
+    "Color": {
+      "title": "Colour",
+      "description": "A hex colour, with optional alpha, for example #2563EB or #2563EBFF.",
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+      "examples": ["#2563EB", "#0B1220FF"]
+    },
+
+    "AssetRef": {
+      "title": "Asset reference",
+      "description": "A content-addressed pointer to an uploaded file. The studio fills this in when you upload; identical files are stored once.",
+      "type": "string",
+      "pattern": "^asset://sha256-[0-9a-f]{64}$",
+      "examples": ["asset://sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]
+    },
+
+    "IconRef": {
+      "title": "Icon",
+      "description": "Either a built-in icon name such as 'home', or an uploaded image.",
+      "oneOf": [
+        {
+          "title": "Built-in icon",
+          "description": "Name from the built-in icon set.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+          "examples": ["home", "shopping-bag"]
+        },
+        { "$ref": "#/$defs/AssetRef" }
+      ]
+    },
+
+    "ItemId": {
+      "title": "Item identifier",
+      "description": "A stable id used to track this item across edits. Generated for you; changing it is treated as deleting and re-adding.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "examples": ["home", "tab-orders"]
+    },
+
+    "PluginId": {
+      "title": "Plugin identifier",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,39}$",
+      "examples": ["qr-scanner", "biometric"]
+    },
+
+    "LocalizedString": {
+      "title": "Text",
+      "description": "Either plain text, or an object of translations keyed by language code with a 'default' entry.",
+      "oneOf": [
+        {
+          "title": "Plain text",
+          "description": "Used for every language.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        {
+          "title": "Translations",
+          "description": "Per-language text. 'default' is used for any language not listed.",
+          "type": "object",
+          "required": ["default"],
+          "propertyNames": { "pattern": "^(default|[a-z]{2}(-[A-Za-z0-9]{2,8})?)$" },
+          "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      ]
+    },
+
+    "UrlPattern": {
+      "title": "URL pattern",
+      "description": "A regular expression matched against the full URL. Use .* to match everything.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "examples": ["^https://app\\.acme\\.com", "^/orders", ".*"]
+    },
+
+    "UrlOrPath": {
+      "title": "URL or path",
+      "description": "A full https URL, or a path such as /orders resolved against your start URL.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^(https://[^\\s]+|/[^\\s]*)$",
+      "examples": ["/orders", "https://acme.com/help"]
+    },
+
+    "HttpsUrl": {
+      "title": "Secure URL",
+      "description": "A full https URL. Plain http is blocked by both platforms.",
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://[^\\s]+$",
+      "maxLength": 2048
+    },
+
+    "HttpsOrigin": {
+      "title": "Secure origin",
+      "description": "Scheme, host, and optional port, with no path — for example https://app.acme.com.",
+      "type": "string",
+      "pattern": "^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:\\d{1,5})?$",
+      "maxLength": 255
+    },
+
+    "Hostname": {
+      "title": "Domain name",
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+      "maxLength": 253,
+      "examples": ["app.acme.com"]
+    }
+  }
+}

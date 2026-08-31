@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/packages/" />
+  <Folder Name="/packages/config-schema/" />
+  <Folder Name="/packages/config-schema/dotnet/">
+    <Project Path="packages/config-schema/dotnet/Shellwright.ConfigSchema/Shellwright.ConfigSchema.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shellwright.ConfigSchema.Tests/Shellwright.ConfigSchema.Tests.csproj" />
+  </Folder>
+</Solution>

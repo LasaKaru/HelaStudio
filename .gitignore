@@ -1,0 +1,56 @@
+# ── Node / pnpm / turbo ────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+coverage/
+.vite/
+.eslintcache
+
+# ── .NET ───────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+TestResults/
+BenchmarkDotNet.Artifacts/
+.vs/
+
+# ── Android ────────────────────────────────────────────────────────────
+.gradle/
+local.properties
+captures/
+*.hprof
+.cxx/
+
+# ── iOS / Xcode ────────────────────────────────────────────────────────
+DerivedData/
+Pods/
+*.xcuserdatad/
+*.xcworkspace/xcuserdata/
+.swiftpm/
+
+# ── Secrets & signing material — never, under any circumstance ─────────
+*.p8
+*.p12
+*.pem
+*.key
+*.keystore
+*.jks
+*.mobileprovision
+.env
+.env.*
+!.env.example
+secrets/
+
+# ── OS / editor ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ── Verify (snapshot testing) rejected output ──────────────────────────
+*.received.*

@@ -1,0 +1,42 @@
+# Shellwright — one formatting truth for six toolchains.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+[*.{cs,csx}]
+indent_size = 4
+# Style rules are build-enforced (EnforceCodeStyleInBuild in Directory.Build.props).
+csharp_style_namespace_declarations = file_scoped:error
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_prefer_braces = true:error
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
+dotnet_diagnostic.CA1848.severity = suggestion
+dotnet_diagnostic.CA2007.severity = none
+
+[*.{kt,kts}]
+indent_size = 4
+ktlint_standard_no-wildcard-imports = enabled
+
+[*.swift]
+indent_size = 4
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.{json,jsonc}]
+indent_size = 2

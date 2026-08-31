@@ -1,0 +1,52 @@
+name: Nightly
+
+# A stub until Sprint 04, when there is a code generator and a real shell to
+# build. It exists now so that adding those jobs is an edit rather than a
+# discovery that nothing was ever wired up.
+on:
+  schedule:
+    # 02:00 UTC, outside the hours anyone is pushing.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    name: Full suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:coverage
+      - run: dotnet test -c Release
+
+      # Budgets are asserted inside the suites above; this records the numbers
+      # over time so a slow drift is visible before it breaches.
+      - name: Performance budgets
+        run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
+
+  planned:
+    name: Planned from Sprint 04
+    runs-on: ubuntu-latest
+    steps:
+      - name: What lands here
+        run: |
+          cat <<'NOTE'
+          Nightly jobs to add as their sprints land:
+            S04  real Android build from 5 fixture configs, install on emulator, Espresso smoke
+            S05  real iOS build from 5 fixture configs, install on simulator, XCUITest smoke
+            S07  end-to-end pipeline: config submitted via API produces signed artifacts
+            S10  plugin all-pairs combination matrix
+            S12  Playwright journeys through the studio, plus axe-core accessibility
+          See 03_TEST_STRATEGY.md sections 7 and 8.
+          NOTE

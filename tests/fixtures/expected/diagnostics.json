@@ -1,0 +1,360 @@
+{
+  "all-plugins.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
+  "edge-deep-nesting.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
+  "edge-long-bundleid.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
+  "edge-many-linkrules.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
+  "edge-many-tabs.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_TAB_COUNT_HIGH",
+        "severity": "warning",
+        "path": "/navigation/tabBar/items",
+        "message": "You have 8 tabs. iOS shows only the first four and hides the rest behind a \"More\" tab, which most users never open. Keep five or fewer, and move the rest into a drawer.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_tab_count_high"
+      }
+    ],
+    "info": []
+  },
+  "edge-no-tabs.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
+  "edge-single-page.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_NO_NATIVE_FEATURES",
+        "severity": "warning",
+        "path": "",
+        "message": "This app has no native navigation, no plugins, and no native screens, so it is a web page in a frame. Apple rejects these under App Store guideline 4.2. Add a tab bar or drawer, enable a capability such as push notifications or biometric unlock, or add an onboarding screen.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_no_native_features"
+      }
+    ],
+    "info": []
+  },
+  "invalid-CFG_BUNDLE_ID_INVALID.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_BUNDLE_ID_INVALID",
+        "severity": "error",
+        "path": "/app/bundleId",
+        "message": "The bundle identifier must be lowercase reverse-DNS with at least one dot, such as com.acme.app. Uppercase letters, spaces, and leading digits are rejected by both stores.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_bundle_id_invalid"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_CLEARTEXT_URL.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_CLEARTEXT_URL",
+        "severity": "error",
+        "path": "/nativeSurfaces/0/config/learnMoreUrl",
+        "message": "This is a plain http:// URL. iOS App Transport Security and Android cleartext policy both block it by default, so it would fail to load on a real device. Use https:// instead.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_cleartext_url"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_DUPLICATE_ITEM_ID.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_DUPLICATE_ITEM_ID",
+        "severity": "error",
+        "path": "/navigation/drawer/items/1/id",
+        "message": "The id \"home\" is already used by item 1 in this list. Every item needs its own id so edits and reordering are tracked correctly.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_duplicate_item_id"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_INITIAL_URL_NOT_ALLOWED.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_INITIAL_URL_NOT_ALLOWED",
+        "severity": "error",
+        "path": "/app/initialUrl",
+        "message": "The start URL is on https://app.acme.com, which is not in your allowed origins. Add \"https://app.acme.com\" to allowedOrigins, or point the start URL at an origin you have already listed.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_initial_url_not_allowed"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_LINK_RULE_NO_CATCHALL.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_LINK_RULE_NO_CATCHALL",
+        "severity": "warning",
+        "path": "/linkRules",
+        "message": "No rule matches every remaining link, so it is not defined where an unrecognised link opens. Add a final rule with the pattern \".*\" and the action you want as the fallback, usually externalBrowser.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_link_rule_no_catchall"
+      }
+    ],
+    "info": []
+  },
+  "invalid-CFG_LINK_RULE_UNREACHABLE.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_LINK_RULE_UNREACHABLE",
+        "severity": "warning",
+        "path": "/linkRules/1/pattern",
+        "message": "Rule 2 can never match, because rule 1 above it already matches everything it would. Move this rule above that one, or remove it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_link_rule_unreachable"
+      }
+    ],
+    "info": []
+  },
+  "invalid-CFG_NAME_TOO_LONG.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_NAME_TOO_LONG",
+        "severity": "error",
+        "path": "/app/name",
+        "message": "The app name is longer than 30 characters, which is the App Store limit. Shorten it, or use a shorter name on the icon and the full name in your store listing.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_name_too_long"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_ORIGIN_NOT_COVERED.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_ORIGIN_NOT_COVERED",
+        "severity": "error",
+        "path": "/navigation/drawer/items/2/url",
+        "message": "This destination is on https://partner.example.com, which is not in your allowed origins, so it would open in the device browser instead of inside the app. Add \"https://partner.example.com\" to allowedOrigins.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_origin_not_covered"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_PERMISSION_UNJUSTIFIED.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_PERMISSION_UNJUSTIFIED",
+        "severity": "warning",
+        "path": "/permissions/contacts",
+        "message": "Nothing in this configuration uses the contacts permission. Both stores ask why a permission is requested, and an unexplained prompt is a common rejection reason. Turn it off unless your website genuinely asks for it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_permission_unjustified"
+      }
+    ],
+    "info": []
+  },
+  "invalid-CFG_PLUGIN_CONFIG_INVALID.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_PLUGIN_CONFIG_INVALID",
+        "severity": "error",
+        "path": "/plugins/qr-scanner/beepOnScan",
+        "message": "QR and Barcode Scanner: this value must be either on or off.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_plugin_config_invalid"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_PLUGIN_CONFLICT.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_PLUGIN_CONFLICT",
+        "severity": "error",
+        "path": "/plugins/qr-scanner",
+        "message": "\"qr-scanner\" and \"scandit-scanner\" conflict. Both register a camera scanning surface. Remove one of them.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_plugin_conflict"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_PLUGIN_MIN_SDK.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_PLUGIN_MIN_SDK",
+        "severity": "error",
+        "path": "/plugins/document-scanner",
+        "message": "Document Scanner needs Android API 26 or newer, but this app targets API 24. Raise build.android.minSdk to 26, or remove the plugin.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_plugin_min_sdk"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_PLUGIN_PERMISSION_MISSING.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_PLUGIN_PERMISSION_MISSING",
+        "severity": "error",
+        "path": "/permissions/biometric",
+        "message": "Face ID and Fingerprint cannot work without the biometric permission, which is currently off. Turn on permissions.biometric, or remove the plugin.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_plugin_permission_missing"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_PLUGIN_UNKNOWN.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_PLUGIN_UNKNOWN",
+        "severity": "error",
+        "path": "/plugins/telepathy",
+        "message": "There is no plugin called \"telepathy\". Check the spelling against the plugin library, or remove this entry.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_plugin_unknown"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_REGEX_CATASTROPHIC.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_REGEX_CATASTROPHIC",
+        "severity": "error",
+        "path": "/linkRules/0/pattern",
+        "message": "The construct (a+)+ nests one repetition inside another, which can take exponential time to match and would freeze the app on every navigation. Rewrite it with a single repetition, for example (a+) instead of (a+)+.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_regex_catastrophic"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_REGEX_INVALID.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_REGEX_INVALID",
+        "severity": "error",
+        "path": "/linkRules/0/pattern",
+        "message": "This pattern is not a valid regular expression, so no link could ever match it. Check for an unclosed bracket or parenthesis, and remember to escape dots in domain names - for example ^https://app\\.acme\\.com.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_regex_invalid"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_SCHEMA_VERSION_UNSUPPORTED.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_SCHEMA_VERSION_UNSUPPORTED",
+        "severity": "error",
+        "path": "/schemaVersion",
+        "message": "This configuration was written for schema version 2, but this build understands up to version 1. Update to a newer release before opening it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_schema_version_unsupported"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_SECRET_IN_CONFIG.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_SECRET_IN_CONFIG",
+        "severity": "error",
+        "path": "/webOverrides/headers/Authorization",
+        "message": "A value under \"Authorization\" is almost always a credential. App configuration is stored, exported, and embedded in the app itself, where anyone who downloads it can read this value. Store the credential in your workspace credentials instead and reference it by id, or have your website supply it after the user signs in.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_secret_in_config"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "invalid-CFG_UNKNOWN_FIELD.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_UNKNOWN_FIELD",
+        "severity": "error",
+        "path": "/brandng",
+        "message": "\"brandng\" is not a recognised setting here. Check the spelling, or move it under an \"x-\" prefixed object if it is your own data.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_unknown_field"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "maximal.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_PERMISSION_UNJUSTIFIED",
+        "severity": "warning",
+        "path": "/permissions/photoLibrary",
+        "message": "Nothing in this configuration uses the photoLibrary permission. Both stores ask why a permission is requested, and an unexplained prompt is a common rejection reason. Turn it off unless your website genuinely asks for it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_permission_unjustified"
+      }
+    ],
+    "info": []
+  },
+  "minimal.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_NO_NATIVE_FEATURES",
+        "severity": "warning",
+        "path": "",
+        "message": "This app has no native navigation, no plugins, and no native screens, so it is a web page in a frame. Apple rejects these under App Store guideline 4.2. Add a tab bar or drawer, enable a capability such as push notifications or biometric unlock, or add an onboarding screen.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_no_native_features"
+      }
+    ],
+    "info": []
+  },
+  "unicode.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  }
+}

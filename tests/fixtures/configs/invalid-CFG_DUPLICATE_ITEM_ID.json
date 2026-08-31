@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Duplicate Id",
+    "bundleId": "dev.shellwright.duplicateid",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "home",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}
