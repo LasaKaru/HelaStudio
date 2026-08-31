@@ -25,14 +25,14 @@
   },
   "dependencies": {
     "@noble/hashes": "1.7.0",
-    "ajv": "8.17.1",
+    "ajv": "8.18.0",
     "ajv-formats": "3.0.1"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "3.2.6",
     "fast-check": "3.23.2",
     "json-schema-to-typescript": "15.0.4",
-    "tsx": "4.19.2",
+    "tsx": "4.23.13",
     "typescript": "5.7.3",
     "vitest": "3.2.6"
   }
