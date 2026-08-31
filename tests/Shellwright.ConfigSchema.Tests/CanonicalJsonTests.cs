@@ -107,26 +107,26 @@ public sealed class CanonicalJsonTests
         switch (node)
         {
             case JsonObject obj:
-            {
-                var reversed = new JsonObject();
-                foreach (var (key, value) in obj.Reverse())
                 {
-                    reversed[key] = ReverseKeys(value);
-                }
+                    var reversed = new JsonObject();
+                    foreach (var (key, value) in obj.Reverse())
+                    {
+                        reversed[key] = ReverseKeys(value);
+                    }
 
-                return reversed;
-            }
+                    return reversed;
+                }
 
             case JsonArray array:
-            {
-                var copy = new JsonArray();
-                foreach (var item in array)
                 {
-                    copy.Add(ReverseKeys(item));
-                }
+                    var copy = new JsonArray();
+                    foreach (var item in array)
+                    {
+                        copy.Add(ReverseKeys(item));
+                    }
 
-                return copy;
-            }
+                    return copy;
+                }
 
             default:
                 return node?.DeepClone();

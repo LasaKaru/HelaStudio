@@ -140,29 +140,29 @@ public static class ConfigHasher
         switch (node)
         {
             case JsonArray array:
-            {
-                var result = new JsonArray();
-                foreach (var item in array)
                 {
-                    result.Add(StripLabels(item));
-                }
+                    var result = new JsonArray();
+                    foreach (var item in array)
+                    {
+                        result.Add(StripLabels(item));
+                    }
 
-                return result;
-            }
+                    return result;
+                }
 
             case JsonObject obj:
-            {
-                var result = new JsonObject();
-                foreach (var (key, value) in obj)
                 {
-                    if (!LabelKeys.Contains(key))
+                    var result = new JsonObject();
+                    foreach (var (key, value) in obj)
                     {
-                        result[key] = StripLabels(value);
+                        if (!LabelKeys.Contains(key))
+                        {
+                            result[key] = StripLabels(value);
+                        }
                     }
-                }
 
-                return result;
-            }
+                    return result;
+                }
 
             default:
                 return node?.DeepClone();

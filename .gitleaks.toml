@@ -38,9 +38,21 @@ path = '''\.(properties|gradle|kts)$'''
 tags = ["android", "signing"]
 
 [allowlist]
-description = "Fixtures and documentation deliberately contain fake-shaped secrets."
+description = """
+The CFG_SECRET_IN_CONFIG rule detects credentials pasted into a configuration.
+Testing a credential detector requires strings shaped like credentials, so the
+files below carry deliberately fake test vectors — published example values such
+as AKIAIOSFODNN7EXAMPLE, or obvious filler. None is or ever was live.
+
+Scoped to exact paths on purpose. A directory-wide or extension-wide exclusion
+here would be the hole the next real leak walks through.
+"""
 paths = [
-  '''tests/fixtures/secrets/.*''',
-  '''docs/reference/diagnostics\.md''',
-  '''\.gitleaks\.toml''',
+  '''^tests/fixtures/configs/invalid-CFG_SECRET_IN_CONFIG\.json$''',
+  '''^tests/fixtures/expected/.*\.json$''',
+  '''^packages/config-schema/src/rules/secret-rules\.ts$''',
+  '''^packages/config-schema/test/rules\.test\.ts$''',
+  '''^packages/config-schema/dotnet/Shellwright\.ConfigSchema/Rules/SecretRules\.cs$''',
+  '''^docs/reference/diagnostics\.md$''',
+  '''^\.gitleaks\.toml$''',
 ]
