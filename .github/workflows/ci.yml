@@ -60,6 +60,10 @@ jobs:
     needs: changes
     steps:
       - uses: actions/checkout@v4
+        with:
+          # commitlint walks the range between base and head, so the shallow
+          # default checkout leaves it with no revisions to compare.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

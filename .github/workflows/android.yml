@@ -25,6 +25,12 @@ defaults:
   run:
     working-directory: shells/android
 
+# Still to add, and blocked only on emulator time:
+#   Espresso smoke suite against the three fixture sites
+#   Macrobenchmark cold-start budget (TC-S02-PRF-001, under 300 ms)
+#   Instrumented security checks (TC-S02-SEC-001, TC-S02-SEC-002)
+# Run these with reactivecircus/android-emulator-runner. Unmetered once the
+# shell moves to its own public repository — see ADR 0002.
 jobs:
   build:
     name: Build and unit test
@@ -76,17 +82,3 @@ jobs:
           path: shells/android/app/build/reports/
           if-no-files-found: ignore
 
-  planned:
-    name: Planned once a device is available
-    runs-on: ubuntu-latest
-    steps:
-      - name: What lands here
-        run: |
-          cat <<'NOTE'
-          Still to add, and blocked only on emulator time:
-            Espresso smoke suite against the three fixture sites
-            Macrobenchmark cold-start budget (TC-S02-PRF-001, under 300 ms)
-            Instrumented security checks (TC-S02-SEC-001, TC-S02-SEC-002)
-          Run these with reactivecircus/android-emulator-runner. Unmetered once
-          the shell moves to its own public repository — see ADR 0002.
-          NOTE

@@ -12,6 +12,13 @@ on:
 permissions:
   contents: read
 
+# Nightly jobs to add as their sprints land:
+#   S04  real Android build from 5 fixture configs, install on emulator, Espresso smoke
+#   S05  real iOS build from 5 fixture configs, install on simulator, XCUITest smoke
+#   S07  end-to-end pipeline: config submitted via API produces signed artifacts
+#   S10  plugin all-pairs combination matrix
+#   S12  Playwright journeys through the studio, plus axe-core accessibility
+# See 03_TEST_STRATEGY.md sections 7 and 8.
 jobs:
   full-suite:
     name: Full suite
@@ -35,18 +42,3 @@ jobs:
       - name: Performance budgets
         run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
 
-  planned:
-    name: Planned from Sprint 04
-    runs-on: ubuntu-latest
-    steps:
-      - name: What lands here
-        run: |
-          cat <<'NOTE'
-          Nightly jobs to add as their sprints land:
-            S04  real Android build from 5 fixture configs, install on emulator, Espresso smoke
-            S05  real iOS build from 5 fixture configs, install on simulator, XCUITest smoke
-            S07  end-to-end pipeline: config submitted via API produces signed artifacts
-            S10  plugin all-pairs combination matrix
-            S12  Playwright journeys through the studio, plus axe-core accessibility
-          See 03_TEST_STRATEGY.md sections 7 and 8.
-          NOTE
