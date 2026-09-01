@@ -38,6 +38,30 @@ public sealed record ToolchainDescriptor(
                 new KeyValuePair<string, string>("compileSdk", "36"),
             ]));
 
+    /// <summary>The toolchain the in-tree iOS shell is pinned to.</summary>
+    /// <remarks>
+    /// ⚠️ <c>xcodegen</c> is here because it decides the bytes of the generated
+    /// project. XcodeGen derives its object UUIDs from paths and names, which
+    /// makes it deterministic in principle — but a version bump can change that
+    /// derivation, and a change in project bytes must invalidate the build
+    /// cache deliberately rather than surface as a mysterious full rebuild.
+    ///
+    /// <c>xcode</c> is here for the same reason and a sharper one: Xcode's
+    /// project format shifts roughly annually, and that break is certain rather
+    /// than hypothetical.
+    /// </remarks>
+    public static ToolchainDescriptor Ios { get; } = new(
+        ShellVersion: "0.3.0",
+        GeneratorVersion: "0.5.0",
+        Versions: ImmutableSortedDictionary.CreateRange(
+            StringComparer.Ordinal,
+            [
+                new KeyValuePair<string, string>("xcode", "16.2"),
+                new KeyValuePair<string, string>("xcodegen", "2.42.0"),
+                new KeyValuePair<string, string>("swift", "6.0"),
+                new KeyValuePair<string, string>("iosDeploymentTarget", "15.0"),
+            ]));
+
     /// <summary>The toolchain as hash context, for the three cache keys.</summary>
     /// <returns>A hash context naming this shell and toolchain.</returns>
     public ConfigSchema.HashContext ToHashContext() =>

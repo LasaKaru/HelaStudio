@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  ⚠️ Each domain needs an apple-app-site-association file served over HTTPS
+	  from https://<host>/.well-known/, with no redirects and no query string.
+	  Without it iOS silently declines to open the link in the app: there is no
+	  error, no log line, and to the customer it simply looks like deep links
+	  do not work.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:a.bobs.example</string>
+		<string>applinks:m.bobs.example</string>
+		<string>applinks:order.bobs.example</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.bobs.diner</string>
+	</array>
+</dict>
+</plist>

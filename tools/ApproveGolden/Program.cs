@@ -34,7 +34,8 @@ if (args is ["emit", var fixture, var outputDirectory])
     return 0;
 }
 
-await RegenerateShellAsync(repoRoot).ConfigureAwait(false);
+await RegenerateShellAsync(repoRoot, "android").ConfigureAwait(false);
+await RegenerateShellAsync(repoRoot, "ios").ConfigureAwait(false);
 await RegenerateGoldensAsync(repoRoot).ConfigureAwait(false);
 
 Console.WriteLine();
@@ -42,20 +43,28 @@ Console.WriteLine("Done. Review `git diff` before committing — that review is 
 
 return 0;
 
-static async Task RegenerateShellAsync(string repoRoot)
+static async Task RegenerateShellAsync(string repoRoot, string platform)
 {
-    var shell = Path.Combine(repoRoot, "shells", "android");
-    var configPath = Path.Combine(shell, "app", "src", "main", "assets", "appconfig.json");
+    var shell = Path.Combine(repoRoot, "shells", platform);
+    var configPath = platform == "android"
+        ? Path.Combine(shell, "app", "src", "main", "assets", "appconfig.json")
+        : Path.Combine(shell, "Resources", "appconfig.json");
     var resolved = GoldenCorpus.Resolve(
         System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(configPath).ConfigureAwait(false))!);
 
     var sink = new InMemoryFileSink();
-    await new AndroidProjectGenerator(new TemplateSource(shell), GoldenCorpus.AssetStore(repoRoot))
-        .GenerateAsync(resolved, ToolchainDescriptor.Android, sink)
-        .ConfigureAwait(false);
+    var assets = GoldenCorpus.AssetStore(repoRoot);
+
+    ProjectGenerator generator = platform == "android"
+        ? new AndroidProjectGenerator(new TemplateSource(shell), assets)
+        : new Shellwright.Codegen.Ios.IosProjectGenerator(new TemplateSource(shell), assets);
+
+    var toolchain = platform == "android" ? ToolchainDescriptor.Android : ToolchainDescriptor.Ios;
+
+    await generator.GenerateAsync(resolved, toolchain, sink).ConfigureAwait(false);
 
     Console.WriteLine();
-    Console.WriteLine("Shell files rendered from their own templates:");
+    Console.WriteLine($"{platform}: shell files rendered from their own templates:");
 
     foreach (var file in sink.Files)
     {
@@ -89,28 +98,31 @@ static async Task RegenerateGoldensAsync(string repoRoot)
     Console.WriteLine();
     Console.WriteLine("Golden snapshots:");
 
-    foreach (var fixture in GoldenCorpus.Fixtures)
+    foreach (var platform in GoldenCorpus.Platforms)
     {
-        var sink = await GoldenCorpus.GenerateAsync(repoRoot, fixture).ConfigureAwait(false);
-        var name = Path.GetFileNameWithoutExtension(fixture);
-        var directory = Path.Combine(goldenRoot, name);
-
-        Directory.CreateDirectory(directory);
-        await File.WriteAllTextAsync(
-            Path.Combine(directory, "tree.txt"),
-            GoldenCorpus.TreeManifest(sink)).ConfigureAwait(false);
-
-        var reviewable = 0;
-
-        foreach (var file in sink.Files.Where(file => GoldenCorpus.IsReviewableText(file.Path)))
+        foreach (var fixture in GoldenCorpus.Fixtures)
         {
-            var target = Path.Combine(directory, "files", file.Path.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            await File.WriteAllBytesAsync(target, file.Content.AsSpan().ToArray()).ConfigureAwait(false);
-            reviewable++;
-        }
+            var sink = await GoldenCorpus.GenerateAsync(repoRoot, fixture, platform).ConfigureAwait(false);
+            var name = Path.GetFileNameWithoutExtension(fixture);
+            var directory = Path.Combine(goldenRoot, platform, name);
 
-        Console.WriteLine($"  {name}: {sink.Files.Count} files, {reviewable} committed in full");
+            Directory.CreateDirectory(directory);
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, "tree.txt"),
+                GoldenCorpus.TreeManifest(sink)).ConfigureAwait(false);
+
+            var reviewable = 0;
+
+            foreach (var file in sink.Files.Where(file => GoldenCorpus.IsReviewableText(file.Path)))
+            {
+                var target = Path.Combine(directory, "files", file.Path.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                await File.WriteAllBytesAsync(target, file.Content.AsSpan().ToArray()).ConfigureAwait(false);
+                reviewable++;
+            }
+
+            Console.WriteLine($"  {platform}/{name}: {sink.Files.Count} files, {reviewable} committed in full");
+        }
     }
 }
 

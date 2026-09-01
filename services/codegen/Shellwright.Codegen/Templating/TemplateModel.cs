@@ -71,6 +71,20 @@ public static class TemplateModel
     {
         string text => Escapers.Escape(text, format),
         IEnumerable<string> items => items.Select(item => Escapers.Escape(item, format)).ToList(),
+
+        // A map reaches templates as an ordered list of {key, value} pairs.
+        // Scriban iterates a list predictably where its handling of a
+        // dictionary depends on the runtime type, and predictable iteration is
+        // the difference between a stable generated file and a cache miss.
+        IEnumerable<KeyValuePair<string, string>> pairs =>
+            pairs.Select(pair =>
+            {
+                var entry = new ScriptObject();
+                entry["key"] = Escapers.Escape(pair.Key, format);
+                entry["value"] = Escapers.Escape(pair.Value, format);
+                return entry;
+            }).ToList(),
+
         _ => value,
     };
 

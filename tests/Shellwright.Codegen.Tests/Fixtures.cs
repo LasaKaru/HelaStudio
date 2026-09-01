@@ -25,9 +25,16 @@ internal static class Fixtures
     /// <summary>A store over the fixture assets.</summary>
     internal static Codegen.Assets.IAssetStore Assets() => new Codegen.Assets.DirectoryAssetStore(AssetDir);
 
+    /// <summary>The iOS shell, which is also the iOS template.</summary>
+    internal static string IosShell => Path.Combine(RepoRoot, "shells", "ios");
+
     /// <summary>A generator reading the in-tree Android shell.</summary>
     internal static Android.AndroidProjectGenerator Generator() =>
         new(new TemplateSource(AndroidShell), Assets());
+
+    /// <summary>A generator reading the in-tree iOS shell.</summary>
+    internal static Ios.IosProjectGenerator IosGenerator() =>
+        new(new TemplateSource(IosShell), Assets());
 
     /// <summary>Reads a fixture config and resolves its schema defaults.</summary>
     /// <param name="name">The fixture file name.</param>

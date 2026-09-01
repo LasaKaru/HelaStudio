@@ -1,11 +1,8 @@
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
-using Scriban.Runtime;
-using Shellwright.Codegen.Normalisation;
+using Shellwright.Codegen.Assets;
 using Shellwright.Codegen.Templating;
-using Shellwright.ConfigSchema;
 
 namespace Shellwright.Codegen.Android;
 
@@ -13,27 +10,32 @@ namespace Shellwright.Codegen.Android;
 /// Renders <c>shells/android</c> into a buildable Gradle project.
 /// </summary>
 /// <remarks>
-/// ⚠️ The governing constraint is <b>byte-identical output for identical
-/// input</b>. Without it the three-way build cache (ADR 0004) never hits, and
-/// the unit economics the whole business plan rests on do not hold. Sorted
-/// collections, an invariant culture, no timestamps in hashed files, and
-/// explicit permission bits all exist for that one reason — and each is cheap
-/// only because it was done from the start.
+/// The pipeline itself — rendering, normalising, hashing, the manifest — lives
+/// in <see cref="ProjectGenerator"/>, shared with iOS. Only what is genuinely
+/// Android is here.
 /// </remarks>
-public sealed class AndroidProjectGenerator : IProjectGenerator
+public sealed class AndroidProjectGenerator : ProjectGenerator
 {
-    /// <summary>
-    /// Which escaping each template needs, matched most-specific-first.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ Explicit, because a file extension is not enough to decide:
-    /// <c>strings.xml</c> and <c>AndroidManifest.xml</c> are both XML, but only
-    /// one is subject to the resource compiler's backslash rules. An unlisted
-    /// template is a hard error rather than a quiet fall back to no escaping —
-    /// a permissive default here is a bug waiting for the first template
-    /// somebody adds in a hurry.
-    /// </remarks>
-    private static readonly ImmutableArray<(string Suffix, TemplateFormat Format)> FormatsByPath =
+    /// <summary>Creates a generator reading from the Android shell.</summary>
+    /// <param name="templates">The shell to render.</param>
+    /// <param name="assets">Where <c>asset://</c> references are resolved.</param>
+    /// <param name="images">The icon-resizing pipeline.</param>
+    public AndroidProjectGenerator(
+        TemplateSource templates,
+        IAssetStore assets,
+        IImagePipeline? images = null)
+        : base(templates, assets, images)
+    {
+    }
+
+    /// <inheritdoc/>
+    protected override string Platform => "android";
+
+    /// <inheritdoc/>
+    protected override string ConfigAssetPath => "app/src/main/assets/appconfig.json";
+
+    /// <inheritdoc/>
+    protected override ImmutableArray<(string Suffix, TemplateFormat Format)> FormatsByPath =>
         [
             ("strings.xml", TemplateFormat.AndroidResource),
             (".xml", TemplateFormat.Xml),
@@ -46,188 +48,43 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
         ];
 
     /// <summary>
-    /// Paths the generator always writes itself, and so must not copy.
+    /// The placeholder vector a generated icon makes redundant.
     /// </summary>
     /// <remarks>
-    /// The shell keeps a real <c>appconfig.json</c> so it runs standalone —
-    /// that file is what the app reads on a developer's device. For a generated
-    /// project the customer's config takes its place. Copying it as well would
-    /// emit the path twice, which the sink rejects; the sink caught this on the
-    /// generator's very first run, which is the argument for having made a
-    /// duplicate path an error rather than a silent overwrite.
+    /// It exists so the shell builds standalone. Once the config supplies a
+    /// real icon it is unreferenced, and lint fails the customer's build over
+    /// the unused resource — so it is dropped rather than shipped as dead
+    /// weight.
     /// </remarks>
-    /// <summary>
-    /// Shell files that a generated icon makes redundant.
-    /// </summary>
-    /// <remarks>
-    /// The placeholder vector exists so the shell builds standalone. Once the
-    /// config supplies a real icon it is unreferenced, and lint fails the
-    /// customer's build over the unused resource — so it is dropped rather than
-    /// shipped as dead weight.
-    /// </remarks>
-    private static readonly ImmutableArray<string> ReplacedByGeneratedIcon =
-        ["app/src/main/res/drawable/ic_launcher_foreground.xml"];
-
-    private static readonly ImmutableArray<string> AlwaysGenerated =
-        [
-            "app/src/main/assets/appconfig.json",
-            ".shellwright/manifest.json",
-        ];
-
-    private readonly TemplateSource templates;
-    private readonly Assets.IAssetStore assets;
-    private readonly Assets.IImagePipeline images;
-
-    /// <summary>Creates a generator reading from a shell template tree.</summary>
-    /// <param name="templates">The shell to render.</param>
-    /// <param name="assets">Where <c>asset://</c> references are resolved.</param>
-    /// <param name="images">The icon-resizing pipeline.</param>
-    public AndroidProjectGenerator(
-        TemplateSource templates,
-        Assets.IAssetStore assets,
-        Assets.IImagePipeline? images = null)
-    {
-        ArgumentNullException.ThrowIfNull(templates);
-        ArgumentNullException.ThrowIfNull(assets);
-
-        this.templates = templates;
-        this.assets = assets;
-        this.images = images ?? new Assets.SkiaImagePipeline();
-    }
+    protected override ImmutableArray<string> Superseded(JsonObject resolved) =>
+        AndroidIcons.IconReference(resolved) is null
+            ? []
+            : ["app/src/main/res/drawable/ic_launcher_foreground.xml"];
 
     /// <inheritdoc/>
-    public async Task<GenerationResult> GenerateAsync(
+    protected override ImmutableArray<GeneratedFile> PlatformFiles(JsonObject resolved) =>
+        AndroidIcons.Render(resolved, Assets, Images);
+
+    /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, object?> ExtraValues(
         JsonObject resolved,
-        ToolchainDescriptor toolchain,
-        IFileSink sink,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(resolved);
-        ArgumentNullException.ThrowIfNull(toolchain);
-        ArgumentNullException.ThrowIfNull(sink);
-
-        var hashes = ConfigHasher.Compute(resolved, toolchain.ToHashContext());
-        var hasIcon = AndroidIcons.IconReference(resolved) is not null;
-        var written = new List<GeneratedFile>();
-
-        foreach (var template in templates.Read())
+        ToolchainDescriptor toolchain) =>
+        new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ["locales"] = Locales(resolved),
+            ["deepLinkHosts"] = DeepLinkHosts(resolved),
+            ["grantedPermissions"] = GrantedPermissions(resolved),
+            ["removedPermissions"] = RemovedPermissions(resolved),
+            ["projectSlug"] = Slug(resolved),
+            ["screenOrientation"] = ScreenOrientation(resolved),
+            ["customScheme"] = resolved["deepLinks"]?["customScheme"]?.GetValue<string>() ?? string.Empty,
 
-            if (AlwaysGenerated.Contains(template.OutputPath))
-            {
-                continue;
-            }
-
-            if (hasIcon && ReplacedByGeneratedIcon.Contains(template.OutputPath))
-            {
-                continue;
-            }
-
-            written.Add(
-                template.IsTemplate
-                    ? Render(template, resolved, toolchain)
-                    : new GeneratedFile(
-                        template.OutputPath,
-
-                        // Copied files need the same line-ending guarantee as
-                        // rendered ones, or the output encodes whichever
-                        // checkout settings the generator happened to run
-                        // under. See TextNormaliser.NormaliseCopiedFile.
-                        [.. TextNormaliser.NormaliseCopiedFile(template.Content.AsSpan().ToArray())],
-                        template.Mode));
-        }
-
-        written.Add(ConfigAsset(resolved));
-        written.Add(Manifest(resolved, toolchain, hashes));
-
-        // A config with no icon keeps the shell's placeholder, so the generated
-        // project still builds and still looks like something. A config that
-        // *does* name one and cannot resolve it fails loudly: shipping a
-        // customer's app under a placeholder icon is worse than not shipping.
-        written.AddRange(AndroidIcons.Render(resolved, assets, images));
-
-        // Sorted once, here, so the tree manifest and the sink agree and
-        // neither depends on the order the rules happened to run in.
-        written.Sort((left, right) => string.CompareOrdinal(left.Path, right.Path));
-
-        foreach (var file in written)
-        {
-            await sink.WriteAsync(file, cancellationToken).ConfigureAwait(false);
-        }
-
-        var tree = written
-            .Select(file => new TreeEntry(file.Path, file.Mode, file.Length, HashBytes(file.Content.AsSpan())))
-            .ToImmutableArray();
-
-        return new GenerationResult(tree, hashes, HashTree(tree));
-    }
-
-    private static GeneratedFile Render(
-        TemplateFile template,
-        JsonObject resolved,
-        ToolchainDescriptor toolchain)
-    {
-        var format = FormatFor(template.OutputPath);
-
-        var model = TemplateModel.Build(
-            resolved,
-            format,
-            new Dictionary<string, object?>(StringComparer.Ordinal)
-            {
-                ["toolchain"] = ToolchainModel(toolchain),
-                ["locales"] = Locales(resolved),
-                ["deepLinkHosts"] = DeepLinkHosts(resolved),
-                ["grantedPermissions"] = GrantedPermissions(resolved),
-                ["removedPermissions"] = RemovedPermissions(resolved),
-                ["projectSlug"] = ProjectSlug(resolved),
-                ["customScheme"] = resolved["deepLinks"]?["customScheme"]?.GetValue<string>() ?? string.Empty,
-
-                // Whether the launcher icon was generated from the config or is
-                // still the shell's placeholder. The adaptive-icon XML has to
-                // point at whichever exists, or a customer's app ships showing
-                // the placeholder on every Android 8 and later device.
-                ["hasGeneratedIcon"] = AndroidIcons.IconReference(resolved) is not null,
-                ["screenOrientation"] = ScreenOrientation(resolved),
-            });
-
-        var rendered = ScribanTemplateEngine.Render(
-            template.OutputPath,
-            Encoding.UTF8.GetString(template.Content.AsSpan()),
-            model);
-
-        return new GeneratedFile(template.OutputPath, [.. TextNormaliser.ToBytes(rendered)], template.Mode);
-    }
-
-    private static TemplateFormat FormatFor(string outputPath)
-    {
-        foreach (var (suffix, format) in FormatsByPath)
-        {
-            if (outputPath.EndsWith(suffix, StringComparison.Ordinal))
-            {
-                return format;
-            }
-        }
-
-        throw new TemplateException(
-            outputPath,
-            "no escaping rule is registered for this path. Add one to FormatsByPath — defaulting to "
-            + "no escaping would let a customer's app name break their build, or worse.");
-    }
-
-    private static ScriptObject ToolchainModel(ToolchainDescriptor toolchain)
-    {
-        var script = new ScriptObject();
-
-        foreach (var (key, value) in toolchain.Versions)
-        {
-            script[key] = value;
-        }
-
-        script["shellVersion"] = toolchain.ShellVersion;
-        script["generatorVersion"] = toolchain.GeneratorVersion;
-        return script;
-    }
+            // Whether the launcher icon was generated from the config or is
+            // still the shell's placeholder. The adaptive-icon XML has to
+            // point at whichever exists, or a customer's app ships showing
+            // the placeholder on every Android 8 and later device.
+            ["hasGeneratedIcon"] = AndroidIcons.IconReference(resolved) is not null,
+        };
 
     /// <summary>The locales the app ships resources for, always including one.</summary>
     private static List<string> Locales(JsonObject resolved)
@@ -298,51 +155,6 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
     }
 
     /// <summary>
-    /// A Gradle project name derived from the app name.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ Gradle treats several characters in <c>rootProject.name</c> as path
-    /// separators or task-path syntax, so a customer's app name cannot be used
-    /// directly — "My App: 2.0" would produce a project that fails to
-    /// configure. Deriving a slug keeps the name recognisable in build output
-    /// while guaranteeing it is safe, and falls back to the bundle id's last
-    /// segment when a name is entirely non-Latin, which a slug of it would
-    /// otherwise reduce to nothing.
-    /// </remarks>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Globalization",
-        "CA1308:Normalize strings to uppercase",
-        Justification = "Lowercase is the required output, not a case-folding step for comparison. "
-            + "Gradle project names are conventionally lowercase, and this value is never compared.")]
-    private static string ProjectSlug(JsonObject resolved)
-    {
-        var name = resolved["app"]?["name"]?.GetValue<string>() ?? string.Empty;
-        var builder = new StringBuilder(name.Length);
-
-        foreach (var ch in name.ToLowerInvariant())
-        {
-            if (char.IsAsciiLetterOrDigit(ch))
-            {
-                builder.Append(ch);
-            }
-            else if (builder.Length > 0 && builder[^1] != '-')
-            {
-                builder.Append('-');
-            }
-        }
-
-        var slug = builder.ToString().Trim('-');
-
-        if (slug.Length > 0)
-        {
-            return slug;
-        }
-
-        var bundleId = resolved["app"]?["bundleId"]?.GetValue<string>() ?? "app";
-        return bundleId[(bundleId.LastIndexOf('.') + 1)..];
-    }
-
-    /// <summary>
     /// The <c>android:screenOrientation</c> value, or empty to omit the attribute.
     /// </summary>
     /// <remarks>
@@ -401,68 +213,4 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
         return [.. granted];
     }
 
-    /// <summary>The resolved config, canonical, as the shell reads it at runtime.</summary>
-    private static GeneratedFile ConfigAsset(JsonObject resolved) =>
-        new(
-            "app/src/main/assets/appconfig.json",
-            [.. TextNormaliser.ToBytes(CanonicalJson.Serialize(resolved))]);
-
-    /// <summary>
-    /// The generation manifest.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ Not optional. Without it, "why does this customer's app behave
-    /// differently from that one?" has no answer but guesswork. It records
-    /// every input that could produce a different binary.
-    ///
-    /// It carries no timestamp, deliberately: a generated-at field would make
-    /// every project differ from every other and destroy the byte-identity the
-    /// cache depends on. The build record knows the time already.
-    /// </remarks>
-    private static GeneratedFile Manifest(
-        JsonObject resolved,
-        ToolchainDescriptor toolchain,
-        ConfigHashes hashes)
-    {
-        var versions = new JsonObject();
-
-        foreach (var (key, value) in toolchain.Versions)
-        {
-            versions[key] = value;
-        }
-
-        var manifest = new JsonObject
-        {
-            ["generatorVersion"] = toolchain.GeneratorVersion,
-            ["shellVersion"] = toolchain.ShellVersion,
-            ["platform"] = "android",
-            ["schemaVersion"] = resolved["schemaVersion"]?.DeepClone(),
-            ["toolchain"] = versions,
-            ["hashes"] = new JsonObject
-            {
-                ["codeKey"] = hashes.CodeKey,
-                ["assetKey"] = hashes.AssetKey,
-                ["contentKey"] = hashes.ContentKey,
-            },
-        };
-
-        return new GeneratedFile(
-            ".shellwright/manifest.json",
-            [.. TextNormaliser.ToBytes(CanonicalJson.Serialize(manifest))]);
-    }
-
-    private static string HashBytes(ReadOnlySpan<byte> content) =>
-        Convert.ToHexStringLower(global::Blake3.Hasher.Hash(content).AsSpan());
-
-    private static string HashTree(ImmutableArray<TreeEntry> tree)
-    {
-        var lines = new StringBuilder();
-
-        foreach (var entry in tree)
-        {
-            lines.Append(CultureInfo.InvariantCulture, $"{entry.Path} {(int)entry.Mode} {entry.Hash}\n");
-        }
-
-        return HashBytes(Encoding.UTF8.GetBytes(lines.ToString()));
-    }
 }

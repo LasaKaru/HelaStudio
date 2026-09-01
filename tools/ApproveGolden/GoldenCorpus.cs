@@ -60,18 +60,30 @@ public static class GoldenCorpus
         ArgumentNullException.ThrowIfNull(path);
 
         return path.EndsWith(".xml", StringComparison.Ordinal)
-        || path.EndsWith(".kts", StringComparison.Ordinal)
-        || path.EndsWith(".json", StringComparison.Ordinal)
-        || path.EndsWith(".pro", StringComparison.Ordinal)
-        || path.EndsWith(".toml", StringComparison.Ordinal)
-            || path.EndsWith(".properties", StringComparison.Ordinal);
+            || path.EndsWith(".kts", StringComparison.Ordinal)
+            || path.EndsWith(".json", StringComparison.Ordinal)
+            || path.EndsWith(".pro", StringComparison.Ordinal)
+            || path.EndsWith(".toml", StringComparison.Ordinal)
+            || path.EndsWith(".properties", StringComparison.Ordinal)
+            || path.EndsWith(".yml", StringComparison.Ordinal)
+            || path.EndsWith(".plist", StringComparison.Ordinal)
+            || path.EndsWith(".entitlements", StringComparison.Ordinal)
+            || path.EndsWith(".xcprivacy", StringComparison.Ordinal)
+            || path.EndsWith(".sh", StringComparison.Ordinal);
     }
 
-    /// <summary>Generates one fixture into memory.</summary>
+    /// <summary>The platforms a project is generated and approved for.</summary>
+    public static ImmutableArray<string> Platforms { get; } = ["android", "ios"];
+
+    /// <summary>Generates one fixture for one platform, into memory.</summary>
     /// <param name="repoRoot">The repository root.</param>
     /// <param name="fixture">A file name in <c>tests/fixtures/configs</c>.</param>
+    /// <param name="platform">Either <c>android</c> or <c>ios</c>.</param>
     /// <returns>The sink holding the generated project.</returns>
-    public static async Task<InMemoryFileSink> GenerateAsync(string repoRoot, string fixture)
+    public static async Task<InMemoryFileSink> GenerateAsync(
+        string repoRoot,
+        string fixture,
+        string platform = "android")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repoRoot);
 
@@ -79,13 +91,41 @@ public static class GoldenCorpus
         var resolved = Resolve(JsonNode.Parse(await File.ReadAllTextAsync(configPath).ConfigureAwait(false))!);
 
         var sink = new InMemoryFileSink();
-        var generator = new AndroidProjectGenerator(
-            new TemplateSource(Path.Combine(repoRoot, "shells", "android")),
-            AssetStore(repoRoot));
+        await Generator(repoRoot, platform)
+            .GenerateAsync(resolved, Toolchain(platform), sink)
+            .ConfigureAwait(false);
 
-        await generator.GenerateAsync(resolved, ToolchainDescriptor.Android, sink).ConfigureAwait(false);
         return sink;
     }
+
+    /// <summary>The generator for one platform, over the in-tree shell.</summary>
+    /// <param name="repoRoot">The repository root.</param>
+    /// <param name="platform">Either <c>android</c> or <c>ios</c>.</param>
+    /// <returns>The generator.</returns>
+    public static ProjectGenerator Generator(string repoRoot, string platform)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repoRoot);
+
+        var templates = new TemplateSource(Path.Combine(repoRoot, "shells", platform));
+        var assets = AssetStore(repoRoot);
+
+        return platform switch
+        {
+            "android" => new AndroidProjectGenerator(templates, assets),
+            "ios" => new Shellwright.Codegen.Ios.IosProjectGenerator(templates, assets),
+            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, "Unknown platform."),
+        };
+    }
+
+    /// <summary>The pinned toolchain for one platform.</summary>
+    /// <param name="platform">Either <c>android</c> or <c>ios</c>.</param>
+    /// <returns>The descriptor.</returns>
+    public static ToolchainDescriptor Toolchain(string platform) => platform switch
+    {
+        "android" => ToolchainDescriptor.Android,
+        "ios" => ToolchainDescriptor.Ios,
+        _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, "Unknown platform."),
+    };
 
     /// <summary>The fixture asset store, holding the icons fixtures reference.</summary>
     /// <param name="repoRoot">The repository root.</param>

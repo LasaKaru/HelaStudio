@@ -22,14 +22,17 @@ namespace Shellwright.Codegen.Tests;
 /// </remarks>
 public sealed class GoldenTests
 {
-    /// <summary>Every fixture in the corpus has an approved snapshot.</summary>
-    public static TheoryData<string> Corpus()
+    /// <summary>Every fixture, for every platform, has an approved snapshot.</summary>
+    public static TheoryData<string, string> Corpus()
     {
-        var data = new TheoryData<string>();
+        var data = new TheoryData<string, string>();
 
-        foreach (var fixture in GoldenCorpus.Fixtures)
+        foreach (var platform in GoldenCorpus.Platforms)
         {
-            data.Add(fixture);
+            foreach (var fixture in GoldenCorpus.Fixtures)
+            {
+                data.Add(platform, fixture);
+            }
         }
 
         return data;
@@ -38,42 +41,46 @@ public sealed class GoldenTests
     /// <summary>TC-S04-GEN-003 — the tree matches its approved snapshot.</summary>
     [Theory]
     [MemberData(nameof(Corpus))]
-    public async Task TreeMatchesTheApprovedSnapshot(string fixture)
+    public async Task TreeMatchesTheApprovedSnapshot(string platform, string fixture)
     {
-        var sink = await GoldenCorpus.GenerateAsync(Fixtures.RepoRoot, fixture);
+        var sink = await GoldenCorpus.GenerateAsync(Fixtures.RepoRoot, fixture, platform);
         var name = Path.GetFileNameWithoutExtension(fixture);
-        var approved = Path.Combine(Fixtures.GoldenDir, name, "tree.txt");
+        var approved = Path.Combine(Fixtures.GoldenDir, platform, name, "tree.txt");
 
         File.Exists(approved).Should().BeTrue(
-            "no approved snapshot for {0}. Run: dotnet run --project tools/ApproveGolden", name);
+            "no approved snapshot for {0}/{1}. Run: dotnet run --project tools/ApproveGolden",
+            platform,
+            name);
 
         var actual = GoldenCorpus.TreeManifest(sink);
         var expected = await File.ReadAllTextAsync(approved);
 
         actual.Should().Be(
             expected,
-            "the generated tree for {0} changed. Review the diff, then approve it with "
+            "the generated tree for {0}/{1} changed. Review the diff, then approve it with "
             + "`dotnet run --project tools/ApproveGolden` — never the other way round.",
+            platform,
             name);
     }
 
     /// <summary>TC-S04-GEN-031 — every reviewable file matches, byte for byte.</summary>
     [Theory]
     [MemberData(nameof(Corpus))]
-    public async Task ReviewableFilesMatchTheirApprovedContent(string fixture)
+    public async Task ReviewableFilesMatchTheirApprovedContent(string platform, string fixture)
     {
-        var sink = await GoldenCorpus.GenerateAsync(Fixtures.RepoRoot, fixture);
+        var sink = await GoldenCorpus.GenerateAsync(Fixtures.RepoRoot, fixture, platform);
         var name = Path.GetFileNameWithoutExtension(fixture);
-        var root = Path.Combine(Fixtures.GoldenDir, name, "files");
+        var root = Path.Combine(Fixtures.GoldenDir, platform, name, "files");
 
         foreach (var file in sink.Files.Where(file => GoldenCorpus.IsReviewableText(file.Path)))
         {
             var approved = Path.Combine(root, file.Path.Replace('/', Path.DirectorySeparatorChar));
 
-            File.Exists(approved).Should().BeTrue("{0}/{1} has no approved content", name, file.Path);
+            File.Exists(approved).Should().BeTrue(
+                "{0}/{1}/{2} has no approved content", platform, name, file.Path);
 
             (await File.ReadAllBytesAsync(approved))
-                .Should().Equal(file.Content, "{0}/{1} changed", name, file.Path);
+                .Should().Equal(file.Content, "{0}/{1}/{2} changed", platform, name, file.Path);
         }
     }
 
@@ -95,7 +102,8 @@ public sealed class GoldenTests
         var sink = new InMemoryFileSink();
         await Fixtures.Generator().GenerateAsync(resolved, ToolchainDescriptor.Android, sink);
 
-        var approved = await File.ReadAllTextAsync(Path.Combine(Fixtures.GoldenDir, "minimal", "tree.txt"));
+        var approved = await File.ReadAllTextAsync(
+            Path.Combine(Fixtures.GoldenDir, "android", "minimal", "tree.txt"));
 
         GoldenCorpus.TreeManifest(sink).Should().NotBe(approved);
     }

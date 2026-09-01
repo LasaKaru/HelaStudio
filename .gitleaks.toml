@@ -68,5 +68,5 @@ paths = [
   '''^packages/config-schema/dotnet/Shellwright\.ConfigSchema/Rules/SecretRules\.cs$''',
   '''^docs/reference/diagnostics\.md$''',
   '''^\.gitleaks\.toml$''',
-  '''^tests/fixtures/generated/[^/]+/files/\.shellwright/manifest\.json$''',
+  '''^tests/fixtures/generated/[^/]+/[^/]+/files/\.shellwright/manifest\.json$''',
 ]

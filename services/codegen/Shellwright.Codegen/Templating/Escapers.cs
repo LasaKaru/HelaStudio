@@ -23,6 +23,9 @@ public enum TemplateFormat
     /// <summary>A JSON string, without the surrounding quotes.</summary>
     Json,
 
+    /// <summary>A double-quoted YAML scalar, without the surrounding quotes.</summary>
+    Yaml,
+
     /// <summary>No escaping. Only for values that are not attacker-influenced.</summary>
     None,
 }
@@ -61,6 +64,7 @@ public static class Escapers
             TemplateFormat.Xml => Xml(normalized),
             TemplateFormat.GradleKotlin => GradleKotlin(normalized),
             TemplateFormat.Json => Json(normalized),
+            TemplateFormat.Yaml => Yaml(normalized),
             TemplateFormat.None => normalized,
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
@@ -168,6 +172,19 @@ public static class Escapers
 
         return builder.ToString();
     }
+
+    /// <summary>
+    /// Escapes a value for a double-quoted YAML scalar.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Templates must quote the interpolation, and this escaper assumes they
+    /// do. An unquoted YAML scalar is a minefield of its own: a leading
+    /// <c>@</c>, <c>%</c>, <c>*</c> or <c>&amp;</c> is reserved syntax, a colon
+    /// followed by a space starts a mapping, and a bare <c>yes</c> parses as a
+    /// boolean in some readers. Quoting sidesteps all of it, and inside double
+    /// quotes YAML's escaping rules are JSON's.
+    /// </remarks>
+    private static string Yaml(string value) => Json(value);
 
     /// <summary>Escapes a value for a JSON string, without the quotes.</summary>
     /// <remarks>
