@@ -325,8 +325,39 @@ generated output — one by no unit test and no golden file, one by no fixture a
 all. See `SPRINT-04_REVIEW.md`; it is the argument for the nightly real-build
 job being required rather than optional.
 
-Programme total: **660 tests** — 228 TypeScript (226 config-schema, 2 studio),
-259 C#, 125 Kotlin, 48 Swift.
+### Sprint 05 — as built
+
+| Task   | Deliverable                                  | Verified by                      | Status                                                              |
+| ------ | -------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- |
+| T-04.3 | Asset pipeline (carried from Sprint 04)      | `TC-S04-GEN-019`…`028`           | ✅ one icon → 10 Android files and a 1024px iOS icon, deterministic |
+| T-05.1 | Xcode project generation strategy            | `TC-S05-GEN-001`…`006`, ADR 0008 | ✅ `project.yml` + XcodeGen; shared `ProjectGenerator` base         |
+| T-05.2 | `Info.plist`, entitlements, privacy manifest | `TC-S05-GEN-007`…`018`           | ✅ derived per config; plists asserted to parse                     |
+| T-05.3 | Asset catalogue generation                   | `TC-S05-GEN-019`…`026`           | ✅ single-image app icon, both appearances on every colour set      |
+| T-05.4 | Build settings, scheme, signing placeholders | `TC-S05-GEN-027`…`030`           | ◐ emitted; `xcodebuild -list` needs a Mac                           |
+| T-05.5 | Golden tests + nightly iOS build             | `TC-S05-BLD-001`…`004`           | ◐ goldens done; the macOS job is written but opt-in                 |
+
+Codegen suite: **168 tests**, 0 failures.
+
+⚠️ **The iOS generator is unproven against a real toolchain.** Nothing in CI
+runs `xcodebuild`, `xcodegen` or `plutil`. Sprint 04 established that a snapshot
+records what the generator produced, not whether the toolchain accepts it, and
+on iOS that gap is wider. The Codemagic `ios-verify` workflow is where it
+closes — see `SPRINT-05_REVIEW.md`.
+
+### Cross-implementation contracts
+
+| Behaviour              | Implementations               | Corpus                         | Cases |
+| ---------------------- | ----------------------------- | ------------------------------ | ----- |
+| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 31    |
+| Link routing           | Kotlin, Swift                 | `tests/fixtures/routing/`      | 21    |
+| Backtracking heuristic | TypeScript, C#, Kotlin, Swift | `tests/fixtures/regex-safety/` | 30    |
+
+`tests/fixtures/generated/` (14 snapshots, 7 fixtures × 2 platforms) is a
+different thing and worth not conflating: a golden record of one
+implementation's output, not a contract between two.
+
+Programme total: **739 tests** — 228 TypeScript (226 config-schema, 2 studio),
+338 C# (170 config-schema, 168 codegen), 125 Kotlin, 48 Swift.
 
 ⚠️ Run the TypeScript suites through `pnpm test`, not `vitest` from the
 repository root. The studio's two tests need the jsdom environment its own

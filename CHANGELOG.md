@@ -128,6 +128,31 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   (`@Bob's "Diner" & Grill <$5`) and `edge-portrait-locked.json`.
 - 89 codegen tests. Programme total 660.
 
+#### Sprint 05 — code generation for iOS, and the asset pipeline
+
+- `services/codegen` now produces both platforms from one config: 46 files of
+  Gradle project and 28 of Xcode project.
+- Shared `ProjectGenerator` base, extracted before the second generator existed
+  rather than after. The Android generator shrank from 468 lines to 261 and its
+  golden files did not move a byte.
+- `project.yml` for XcodeGen rather than a templated `project.pbxproj`, which
+  keys objects by 96-bit UUIDs and has no stable format (ADR 0008).
+- `Info.plist` usage strings derived per config in both directions: a missing
+  one crashes the app on a device, an unjustified one is a rejection.
+- `PrivacyInfo.xcprivacy` emitted with zero plugins — the shell reads
+  `UserDefaults`, which alone makes the manifest mandatory at upload.
+- Associated domains, custom URL schemes and iPad orientations, all sorted and
+  all derived from the config.
+- Asset pipeline (Sprint 04's T-04.3, carried over): one uploaded icon becomes
+  ten Android launcher files and a 1024px iOS app icon, deterministically.
+- Content-addressed asset store that **verifies** — content not hashing to its
+  own address is refused rather than embedded in a signed binary.
+- SkiaSharp rather than ImageSharp, for licensing rather than capability
+  (ADR 0007).
+- Generated projects no longer ship the shell's own test suite, and `build.sh`
+  arrives executable.
+- 168 codegen tests. Programme total 739.
+
 ### Changed
 
 - `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
@@ -143,6 +168,17 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   non-ASCII. A decomposed accent would have hashed differently in each language.
 - `RenderProcessGoneDetail#didCrash` is API 26 and `minSdk` is 24, so renderer
   recovery would have crashed on Android 7.
+- ImageSharp fails Release builds without a licence key, which a `dotnet test`
+  loop never reaches: Debug was clean and all 128 tests passed.
+- The adaptive-icon XML still pointed at the shell's placeholder, so a generated
+  app would have shown the placeholder mark on every Android 8 and later device.
+- `ACCESS_FINE_LOCATION` was granted without `ACCESS_COARSE_LOCATION`. Since
+  Android 12 that request fails at the permission dialog, so location would
+  never have worked for any customer who enabled it.
+- Every generated project shipped the shell's own test suite, reading a fixtures
+  directory that does not exist there; on iOS `Package.swift` still declared the
+  target, so `swift build` would have failed before compiling a line.
+- The generated `build.sh` arrived at 0644 and could not be run.
 - Codegen read `JsonValue` only in its parsed form, so any config assembled in
   memory — which is what the API will do for every real customer — would have
   thrown. Every fixture comes from a file, so every test passed.
