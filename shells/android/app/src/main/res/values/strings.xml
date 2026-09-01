@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Replaced by code generation from config.app.name (Sprint 04). -->
-    <string name="app_name">Shellwright</string>
+    <string name="app_name">Shellwright Dev</string>
 
     <!--
       User-facing copy. Written to be read by someone who does not know what a

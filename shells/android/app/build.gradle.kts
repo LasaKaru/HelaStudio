@@ -6,6 +6,19 @@ plugins {
 }
 
 android {
+    // ⚠️ Constant, and deliberately NOT the customer's bundle id.
+    //
+    // `namespace` decides the package that R and BuildConfig are generated
+    // into; `applicationId` decides the app's identity on the device and in the
+    // store. They are independent, and conflating them is the trap this
+    // generator walked straight into: setting the namespace from the config put
+    // R in com.acme.whatever while the shell's Kotlin sources still imported
+    // dev.shellwright.shell.R, and every generated project failed to compile.
+    //
+    // Keeping it fixed means the Kotlin sources are copied verbatim and never
+    // rewritten — no package renaming, no source transformation, and one less
+    // thing that can differ between the shell and a generated app. Two apps
+    // sharing a namespace is fine; only applicationId has to be unique.
     namespace = "dev.shellwright.shell"
     compileSdk = 36
 

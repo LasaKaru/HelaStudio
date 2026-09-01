@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Shellwright.Codegen</RootNamespace>
+    <!-- Same reason as Shellwright.ConfigSchema: this project NFC-normalises
+         generated text, and String.Normalize is a silent no-op for non-ASCII
+         under globalization-invariant mode. A silent no-op in a normaliser is
+         the worst possible failure, because the output still looks right. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Scriban" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../packages/config-schema/dotnet/Shellwright.ConfigSchema/Shellwright.ConfigSchema.csproj" />
+  </ItemGroup>
+
+</Project>

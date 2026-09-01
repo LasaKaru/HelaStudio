@@ -7,11 +7,14 @@ JavaScript bridge that lets the website drive real device capability.
 The user never installs Xcode, never touches a certificate, and never learns
 Swift or Kotlin.
 
-**Status:** Phase 0, Sprint 03. The configuration schema, the validation engine,
+**Status:** Phase 1, Sprint 04. The configuration schema, the validation engine,
 and both native shells are built. The remaining Sprint 03 criteria are the M1
 kill gate — one app on TestFlight and on Play internal testing — and are blocked
 on developer-account enrolment and physical devices rather than on code. See
 [`ACTION_REQUIRED.md`](ACTION_REQUIRED.md).
+
+An `appconfig.json` now generates a complete Android project that builds into a
+real APK; the iOS generator and the icon pipeline are Sprint 05.
 
 ## Run it locally
 

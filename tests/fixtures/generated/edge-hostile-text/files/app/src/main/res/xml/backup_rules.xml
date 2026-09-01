@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing is backed up. The web view's cookies and local storage are the user's
+  session with the customer's site; restoring them onto a different device would
+  move a live session with them, which is not ours to do.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
+</full-backup-content>

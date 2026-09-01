@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+      Optional permissions the config does not justify are removed rather than
+      merely omitted: a library can declare one on the app's behalf during
+      manifest merging, and an unjustified permission is among the most common
+      rejection reasons on both stores (CFG_PERMISSION_UNJUSTIFIED).
+    -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.CAMERA"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO"
+        tools:node="remove" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application
+        android:name=".ShellApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Shellwright.Splash"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="34">
+
+        <!--
+          ⚠️ Two lint checks fire on a fixed orientation, not one. DiscouragedApi
+          objects to the attribute existing at all; LockedOrientationActivity
+          objects to the value not being "unspecified" or "fullSensor".
+          Suppressing only the first still fails the build.
+
+          Both are suppressed because the customer asked for this explicitly.
+          Their own build should not refuse their choice — the studio is where
+          to argue that portrait-only is a bad idea on tablets, not aapt.
+        -->
+        <activity
+            android:name=".ShellActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|smallestScreenSize|density"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Shellwright.Splash">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Baseline profiles are installed at first launch: a 20-30% startup
+          improvement for essentially no work, and directly in service of the
+          "does not feel like a wrapper" argument.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
+</manifest>

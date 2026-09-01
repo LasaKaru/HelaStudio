@@ -36,6 +36,8 @@ export const validFixtures: readonly string[] = [
   'maximal.json',
   'all-plugins.json',
   'unicode.json',
+  'edge-hostile-text.json',
+  'edge-portrait-locked.json',
   'edge-no-tabs.json',
   'edge-long-bundleid.json',
   'edge-many-linkrules.json',

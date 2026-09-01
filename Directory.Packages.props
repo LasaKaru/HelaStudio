@@ -12,6 +12,10 @@
     <PackageVersion Include="Blake3" Version="2.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Codegen">
+    <PackageVersion Include="Scriban" Version="7.2.6" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />

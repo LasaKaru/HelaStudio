@@ -40,8 +40,11 @@ jobs:
               - '**/*.csproj'
               - 'Directory.*.props'
               - '.globalconfig'
-              - 'Shellwright.sln'
+              - 'Shellwright.slnx'
               - 'tests/fixtures/**'
+              # The Android shell is the Android template, so editing it
+              # changes generated output and must run the golden tests.
+              - 'shells/android/**'
             node:
               - '**/*.ts'
               - '**/*.tsx'

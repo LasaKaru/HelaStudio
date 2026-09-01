@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Shellwright.Tools.ApproveGolden</RootNamespace>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- A developer-facing console tool. CA1303 wants every literal in a
+         resource table for translation; this output is read by whoever is
+         approving a diff, in this repository, and never shipped. -->
+    <NoWarn>$(NoWarn);CA1303</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../services/codegen/Shellwright.Codegen/Shellwright.Codegen.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -7,3 +7,9 @@ pnpm-lock.yaml
 **/*.verified.*
 **/*.received.*
 .build
+
+# Golden files are byte-exact records of what a generator produced. Reformatting
+# them would make the snapshot disagree with the generator and fail the tests
+# that compare them — the formatter is not the authority here.
+tests/fixtures/generated
+tests/fixtures/expected

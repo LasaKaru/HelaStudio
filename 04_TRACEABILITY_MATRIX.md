@@ -306,4 +306,23 @@ duplicated on purpose.
 backtracking defence had no effect at all and hung the suite. See
 `SPRINT-03_REVIEW.md`.
 
-Programme total: **559 tests** — 224 TypeScript, 164 C#, 123 Kotlin, 48 Swift.
+### Sprint 04 — as built
+
+| Task   | Deliverable                             | Verified by                                  | Status                                                            |
+| ------ | --------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| T-04.1 | Codegen architecture, `IFileSink`       | `TC-S04-GEN-001`, `TC-S04-GEN-002`, ADR 0006 | ✅ in-memory and directory sinks, duplicate paths rejected        |
+| T-04.2 | Android project templating              | `TC-S04-GEN-003`…`018`                       | ✅ 55 files from any valid config, escaping proven to a built APK |
+| T-04.3 | Asset pipeline (icons, splash, colours) | `TC-S04-GEN-019`…`028`                       | ❌ **not started** — moved whole to Sprint 05                     |
+| T-04.4 | Determinism and normalisation           | `TC-S04-GEN-029`, `TC-S04-GEN-030`           | ✅ byte-identity per fixture, plus key-order invariance           |
+| T-04.5 | Golden-file test infrastructure         | `TC-S04-GEN-031`, `TC-S04-GEN-032`           | ✅ 7 fixtures, 147 files, `tools/ApproveGolden`                   |
+| T-04.6 | Nightly real-build verification         | `TC-S04-BLD-001`, `TC-S04-BLD-003`           | ✅ 7-fixture matrix, release build and size budget                |
+|        | Emulator smoke test                     | `TC-S04-BLD-002`                             | ⏳ needs emulator time                                            |
+
+Codegen suite: **77 tests**, 0 failures.
+
+⚠️ Two of the sprint's three bugs were caught only by running Gradle on the
+generated output — one by no unit test and no golden file, one by no fixture at
+all. See `SPRINT-04_REVIEW.md`; it is the argument for the nightly real-build
+job being required rather than optional.
+
+Programme total: **646 tests** — 226 TypeScript, 247 C#, 125 Kotlin, 48 Swift.

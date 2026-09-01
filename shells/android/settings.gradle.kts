@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "shellwright-android"
+rootProject.name = "shellwright-dev"
 include(":app")

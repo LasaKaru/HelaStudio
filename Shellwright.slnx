@@ -4,7 +4,14 @@
   <Folder Name="/packages/config-schema/dotnet/">
     <Project Path="packages/config-schema/dotnet/Shellwright.ConfigSchema/Shellwright.ConfigSchema.csproj" />
   </Folder>
+  <Folder Name="/services/">
+    <Project Path="services/codegen/Shellwright.Codegen/Shellwright.Codegen.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ApproveGolden/ApproveGolden.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Shellwright.ConfigSchema.Tests/Shellwright.ConfigSchema.Tests.csproj" />
+    <Project Path="tests/Shellwright.Codegen.Tests/Shellwright.Codegen.Tests.csproj" />
   </Folder>
 </Solution>

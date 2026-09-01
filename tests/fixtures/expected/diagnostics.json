@@ -11,6 +11,12 @@
     "warnings": [],
     "info": []
   },
+  "edge-hostile-text.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "info": []
+  },
   "edge-long-bundleid.json": {
     "valid": true,
     "errors": [],
@@ -41,6 +47,20 @@
     "valid": true,
     "errors": [],
     "warnings": [],
+    "info": []
+  },
+  "edge-portrait-locked.json": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "CFG_NO_NATIVE_FEATURES",
+        "severity": "warning",
+        "path": "",
+        "message": "This app has no native navigation, no plugins, and no native screens, so it is a web page in a frame. Apple rejects these under App Store guideline 4.2. Add a tab bar or drawer, enable a capability such as push notifications or biometric unlock, or add an onboarding screen.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_no_native_features"
+      }
+    ],
     "info": []
   },
   "edge-single-page.json": {

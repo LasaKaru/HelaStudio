@@ -1,8 +1,12 @@
 name: Nightly
 
-# A stub until Sprint 04, when there is a code generator and a real shell to
-# build. It exists now so that adding those jobs is an edit rather than a
-# discovery that nothing was ever wired up.
+# Golden files prove the generator is *stable*. They do not prove its output
+# *compiles* — only a real build does that, which is why this job exists and why
+# it is not optional. Sprint 04 found exactly one bug this way and none of the
+# 71 unit tests could have: the generated `namespace` was taken from the
+# customer's bundle id, so R and BuildConfig landed in a different package from
+# the Kotlin sources importing them, and every generated project failed to
+# compile.
 on:
   schedule:
     # 02:00 UTC, outside the hours anyone is pushing.
@@ -13,7 +17,7 @@ permissions:
   contents: read
 
 # Nightly jobs to add as their sprints land:
-#   S04  real Android build from 5 fixture configs, install on emulator, Espresso smoke
+#   S04  install each APK on an emulator and run the two-assertion smoke test
 #   S05  real iOS build from 5 fixture configs, install on simulator, XCUITest smoke
 #   S07  end-to-end pipeline: config submitted via API produces signed artifacts
 #   S10  plugin all-pairs combination matrix
@@ -41,3 +45,78 @@ jobs:
       # over time so a slow drift is visible before it breaches.
       - name: Performance budgets
         run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
+
+  # TC-S04-BLD-001. Six fixtures spanning the shapes that break codegen:
+  # nothing, everything, non-Latin script, punctuation that breaks aapt2, many
+  # tabs, many link rules.
+  generated-android-builds:
+    name: Generated project builds (${{ matrix.fixture }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Every fixture's result is wanted, not just the first failure — knowing
+      # whether one config broke or all six is most of the diagnosis.
+      fail-fast: false
+      matrix:
+        fixture:
+          - minimal
+          - maximal
+          - unicode
+          - edge-hostile-text
+          - edge-portrait-locked
+          - edge-many-tabs
+          - edge-many-linkrules
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Generate the project
+        run: dotnet run --project tools/ApproveGolden -- emit ${{ matrix.fixture }}.json generated
+
+      # Release rather than debug, because release is the harder path: it runs
+      # R8 full mode and resource shrinking, which is where a missing keep rule
+      # in a generated project would surface. It is also the only build whose
+      # size means anything — a debug APK is 16 MB and a release one 0.8 MB.
+      - name: Build it
+        working-directory: generated
+        run: ./gradlew assembleRelease lintRelease --console=plain
+
+      # TC-S04-BLD-003. Tracked per fixture, because the fixture that grows is
+      # the one that says which config shape is expensive.
+      - name: APK size budget
+        working-directory: generated
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          BYTES=$(stat -c%s "$APK")
+          LIMIT=$((12 * 1024 * 1024))
+          echo "${{ matrix.fixture }}: $((BYTES / 1024)) kB against a $((LIMIT / 1024)) kB budget"
+          if [ "$BYTES" -gt "$LIMIT" ]; then
+            echo "::error::Generated APK for ${{ matrix.fixture }} is over the 12 MB budget."
+            exit 1
+          fi
+
+      # Published on failure so a broken template can be diagnosed without
+      # reproducing the whole generation locally first.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: generated-${{ matrix.fixture }}
+          path: |
+            generated/**/*.gradle.kts
+            generated/**/AndroidManifest.xml
+            generated/**/res/values/*.xml
+            generated/.shellwright/manifest.json
+          if-no-files-found: ignore

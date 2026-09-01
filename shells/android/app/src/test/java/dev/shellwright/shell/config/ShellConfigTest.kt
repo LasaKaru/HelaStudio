@@ -20,6 +20,8 @@ class ShellConfigTest {
             "maximal.json",
             "all-plugins.json",
             "unicode.json",
+            "edge-hostile-text.json",
+            "edge-portrait-locked.json",
             "edge-no-tabs.json",
             "edge-many-tabs.json",
             "edge-long-bundleid.json",

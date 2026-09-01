@@ -103,6 +103,31 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   request; the macOS job is opt-in.
 - 48 Swift unit tests. Programme total 559.
 
+#### Sprint 04 — code generation for Android
+
+- `services/codegen` turns a resolved `appconfig.json` into a complete Gradle
+  project: 55 files that build with `./gradlew assembleRelease` into a real
+  820 kB APK, with no manual edits.
+- The Android shell is its own template. `shells/android/templates` holds the
+  five parameterised files; the committed concrete files are their rendering
+  against the shell's own config, asserted in CI. One Android codebase, not two
+  (ADR 0006).
+- Escaping is a property of the template model rather than of each call site, so
+  a template author cannot forget it. A template with no registered escaping
+  rule is a hard error, not a silent fall back to none.
+- `IFileSink` keeps the generator off the filesystem: in memory for tests, a
+  directory for real builds, a stream to R2 later. A duplicate output path is an
+  error rather than a last-write-wins overwrite.
+- Determinism is asserted, not assumed: byte-identical output per fixture, key
+  order in the source config proven irrelevant, no timestamps or absolute paths
+  in any generated file, explicit permission bits, LF endings, NFC throughout.
+- Golden snapshots for 7 fixtures with `tools/ApproveGolden` to regenerate them.
+- Nightly job builds every corpus fixture with Gradle and asserts the 12 MB APK
+  budget per fixture.
+- Two fixtures added for bugs actually found: `edge-hostile-text.json`
+  (`@Bob's "Diner" & Grill <$5`) and `edge-portrait-locked.json`.
+- 77 codegen tests. Programme total 646.
+
 ### Changed
 
 - `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
@@ -118,6 +143,16 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   non-ASCII. A decomposed accent would have hashed differently in each language.
 - `RenderProcessGoneDetail#didCrash` is API 26 and `minSdk` is 24, so renderer
   recovery would have crashed on Android 7.
+- Codegen read `JsonValue` only in its parsed form, so any config assembled in
+  memory — which is what the API will do for every real customer — would have
+  thrown. Every fixture comes from a file, so every test passed.
+- Generated projects took the Gradle `namespace` from the customer's bundle id,
+  putting `R` and `BuildConfig` in a different package from the Kotlin sources
+  importing them. Every generated project failed to compile; all 71 unit tests
+  and every golden file passed. Found by running a real Gradle build.
+- A fixed `screenOrientation` trips two Android lint checks rather than one, and
+  lint runs with warnings as errors in generated projects, so every customer
+  choosing portrait would have got a failing build.
 - The iOS backtracking defence had no effect whatsoever. It enforced a deadline
   from the block passed to `enumerateMatches`, which `NSRegularExpression` calls
   for matches and not for progress; ICU never yields while backtracking, so the
