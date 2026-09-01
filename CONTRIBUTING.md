@@ -38,15 +38,26 @@ From `00_MASTER_SPRINT_PLAN.md` §6, a task is not ready unless:
 
 ## Before you open a pull request
 
-Run what CI runs:
-
 ```bash
-pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build
-dotnet build -c Release && dotnet test -c Release
+pnpm verify
 ```
 
-`TreatWarningsAsErrors` is on everywhere and coverage gates are enforced, so a
-green local run is a green CI run.
+That runs what CI runs, the way CI runs it, and prints what it could not check
+because a toolchain is missing.
+
+⚠️ **Do not assemble the commands by hand.** This section used to list them, and
+claimed a green local run was a green CI run. It was not true four separate
+times, and each time the tool was right while the invocation was wrong:
+
+| Trap                                | What happens                                                                                                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gitleaks --no-git`                 | Scans the working tree. CI scans **history**, where a path that moved yesterday still exists.                                                                               |
+| `vitest` from the repository root   | Silently drops the studio's own config, loses jsdom, and fails its tests with `document is not defined` — a failure in the invocation that looks exactly like a regression. |
+| Skipping commitlint                 | It only fires on pull requests, so a subject that broke the convention is invisible until CI. It checks `base..head`, not the tip.                                          |
+| `dotnet build` without `-c Release` | Analyser rules and package licence gates only bite in Release. ImageSharp's licence key check passes Debug and fails Release.                                               |
+
+`scripts/verify.sh` encodes all four. If you find a way for CI to disagree with
+it, that is a bug in the script — fix it there rather than remembering.
 
 ## Two things that will bite you
 

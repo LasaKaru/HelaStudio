@@ -15,7 +15,8 @@
     "typecheck": "turbo run typecheck",
     "generate": "turbo run generate",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify": "bash scripts/verify.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "19.6.1",
