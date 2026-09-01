@@ -175,8 +175,20 @@ General → Default branch.
 
 ### 11. Enable branch protection on `main`
 
-Require the `gate` check — it aggregates every CI job, so adding a job later never
-means touching the protection rule. Require a pull request. Disallow force pushes.
+Require a pull request, disallow force pushes, and require these three checks:
+
+| Check                      | Workflow      | Covers                     |
+| -------------------------- | ------------- | -------------------------- |
+| `gate`                     | `ci.yml`      | lint, Node, .NET, security |
+| `Build and unit test`      | `android.yml` | the Android shell          |
+| `ShellCore build and test` | `ios.yml`     | the iOS shell's logic      |
+
+⚠️ `gate` aggregates the jobs **in `ci.yml` only** — that is what makes adding a
+job there free. The shells are separate workflows, so they need naming
+separately; requiring `gate` alone would let a broken shell merge.
+
+Do not require the macOS job. It only runs on `workflow_dispatch`, so requiring
+it would block every pull request forever.
 
 ### 12. Close Dependabot's open security PRs
 
