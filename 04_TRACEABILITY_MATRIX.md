@@ -271,6 +271,39 @@ committed goldens exactly.
 | T-02.6 | Connectivity, offline page, error handling      | `TC-S02-AND-029`…`034`                                     | ◐ built; airplane-mode cases need a device                                |
 | T-02.7 | Test suite                                      | `TC-S02-PRF-001`                                           | ◐ JVM suite green in CI; Espresso and Macrobenchmark need an emulator     |
 
-Android suite: **68 tests**, 0 failures.
+Android suite: **68 tests**, 0 failures at the close of Sprint 02;
+**123** after Sprint 03 added the two shared contract suites.
 
-Programme total: **396 tests** — 195 TypeScript, 133 C#, 68 Kotlin.
+### Sprint 03 — as built
+
+| Task   | Deliverable                                   | Verified by                                          | Status                                                                       |
+| ------ | --------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| T-03.1 | SwiftPM package, `ShellCore`/`ShellApp` split | `TC-S03-IOS-001`, ADR 0005                           | ✅ `ShellCore` builds and tests on Linux, off metered minutes                |
+| T-03.2 | Config loading and runtime model              | `TC-S03-IOS-002`, `TC-S03-IOS-003`, `TC-S03-PRF-003` | ✅ two-phase parse ported, unknown keys ignored, same fixtures as Android    |
+| T-03.3 | `WKWebView` host with hardening               | `TC-S03-IOS-004`…`012`, `TC-S03-SEC-001`             | ◐ allowlist and ATS unit-tested; the device cases need hardware              |
+| T-03.4 | Native chrome                                 | `TC-S03-IOS-013`…`020`                               | ◐ built; UI tests need a Mac and a simulator                                 |
+| T-03.5 | Link routing engine                           | `TC-S03-IOS-021`…`028`, `TC-S03-PRF-004`             | ✅ shared corpus, identical decisions on both shells                         |
+| T-03.6 | Authentication routing (`RT-08`)              | `TC-S03-SEC-002`                                     | ◐ `ASWebAuthenticationSession` wired; only a real provider can confirm it    |
+| T-03.7 | Connectivity, offline page, error handling    | `TC-S03-IOS-029`…`034`                               | ◐ built; airplane-mode cases need a device                                   |
+| T-03.8 | Codemagic pipeline                            | `TC-S03-BLD-001`                                     | ⏳ config in place at the repository root; needs one manual `ios-verify` run |
+| T-03.9 | Store proof — TestFlight and Play internal    | `TC-S03-BLD-002`, `TC-S03-BLD-003`                   | ⏳ **the M1 kill gate**; blocked on enrolment and hardware                   |
+
+iOS `ShellCore` suite: **48 tests**, 0 failures.
+
+### Cross-implementation contracts
+
+The count of behaviours implemented more than once, and what holds each one
+together. This table is the honest measure of how much of the system is
+duplicated on purpose.
+
+| Behaviour              | Implementations               | Corpus                         | Cases |
+| ---------------------- | ----------------------------- | ------------------------------ | ----- |
+| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 29    |
+| Link routing           | Kotlin, Swift                 | `tests/fixtures/routing/`      | 21    |
+| Backtracking heuristic | TypeScript, C#, Kotlin, Swift | `tests/fixtures/regex-safety/` | 30    |
+
+⚠️ The routing corpus caught a real defect on its first run: the iOS
+backtracking defence had no effect at all and hung the suite. See
+`SPRINT-03_REVIEW.md`.
+
+Programme total: **559 tests** — 224 TypeScript, 164 C#, 123 Kotlin, 48 Swift.

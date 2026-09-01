@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.shellwright.dev/appconfig/v1.json",
+  "schemaVersion": 1,
+  "app": {
+    "name": "Shellwright Dev",
+    "bundleId": "dev.shellwright.shell",
+    "versionName": "1.0.0",
+    "versionCode": 1,
+    "initialUrl": "https://simple.fixtures.shellwright.dev/",
+    "allowedOrigins": ["https://simple.fixtures.shellwright.dev"]
+  },
+  "branding": {
+    "splash": { "backgroundColor": "#0B1220" },
+    "theme": {
+      "primary": "#2563EB",
+      "navBar": "#FFFFFF",
+      "tabBar": "#FFFFFF",
+      "statusBar": "dark-content"
+    },
+    "darkMode": "system"
+  },
+  "navigation": {
+    "topBar": {
+      "enabled": true,
+      "titleSource": "documentTitle",
+      "actions": [{ "id": "refresh", "type": "refresh", "label": "Reload" }]
+    },
+    "tabBar": {
+      "enabled": true,
+      "items": [
+        { "id": "home", "label": "Home", "icon": "home", "url": "/", "activePattern": "/$" },
+        { "id": "orders", "label": "Orders", "icon": "package", "url": "/orders.html", "activePattern": "/orders" },
+        { "id": "account", "label": "Account", "icon": "user", "url": "/account.html", "activePattern": "/account" }
+      ]
+    }
+  },
+  "linkRules": [
+    { "id": "internal", "pattern": "^https://simple\\.fixtures\\.shellwright\\.dev", "action": "internal" },
+    { "id": "fallback", "pattern": ".*", "action": "externalBrowser" }
+  ],
+  "webOverrides": { "persistCookies": true, "allowZoom": false, "pullToRefresh": true },
+  "offline": { "enabled": true, "fallbackBundle": "none" },
+  "permissions": { "camera": false, "location": "none", "notifications": false },
+  "build": { "android": { "minSdk": 24, "targetSdk": 36 }, "orientation": "any", "maximumWindows": 3 }
+}

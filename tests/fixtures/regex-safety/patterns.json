@@ -1,0 +1,157 @@
+{
+  "note": "Read by the TypeScript, C#, Kotlin and Swift implementations of the backtracking heuristic. Every pattern here compiles identically in all four engines, or fails to compile in all four; engine-specific quirks belong in that engine's own test, not here.",
+  "cases": [
+    {
+      "pattern": "^(a+)+$",
+      "verdict": "catastrophic",
+      "why": "the canonical exponential shape: inner and outer repetitions compete for the same characters"
+    },
+    {
+      "pattern": "^(a*)*$",
+      "verdict": "catastrophic",
+      "why": "a star inside a star is the same trap as a plus inside a plus"
+    },
+    {
+      "pattern": "(a|a)*",
+      "verdict": "catastrophic",
+      "why": "identical alternation branches: every character can be consumed two ways"
+    },
+    {
+      "pattern": "(a|ab)*",
+      "verdict": "catastrophic",
+      "why": "one branch is a prefix of the other, so the branches overlap"
+    },
+    {
+      "pattern": "^(x+x+)+y$",
+      "verdict": "catastrophic",
+      "why": "the body starts with a quantified atom even though it does not end with one"
+    },
+    {
+      "pattern": "(?:a+)+",
+      "verdict": "catastrophic",
+      "why": "a non-capturing prefix must be stripped before the body is analysed"
+    },
+    {
+      "pattern": "([a-z]+)+",
+      "verdict": "catastrophic",
+      "why": "a character class is a single atom, and here it is a quantified one"
+    },
+    {
+      "pattern": "(\\d+)+",
+      "verdict": "catastrophic",
+      "why": "an escaped atom is a single atom, and here it is a quantified one"
+    },
+    {
+      "pattern": "(a{2,})+",
+      "verdict": "catastrophic",
+      "why": "{n,} is unbounded, so it explodes exactly as + does"
+    },
+
+    {
+      "pattern": "^https://app\\.acme\\.com",
+      "verdict": "ok",
+      "why": "the pattern almost every real config starts with"
+    },
+    {
+      "pattern": ".*",
+      "verdict": "ok",
+      "why": "the catch-all rule the studio tells users to add"
+    },
+    {
+      "pattern": "^/orders/[0-9]+$",
+      "verdict": "ok",
+      "why": "a quantifier not wrapped in a repetition is linear"
+    },
+    {
+      "pattern": "^[a-z]+(-[a-z]+)*$",
+      "verdict": "ok",
+      "why": "the separated-list idiom: the body must consume a literal '-' first, so repetitions cannot overlap. Rejecting this was a real false positive, corrected in Sprint 01"
+    },
+    {
+      "pattern": "(abc)+",
+      "verdict": "ok",
+      "why": "a repeated literal group is unambiguous"
+    },
+    {
+      "pattern": "(a+)?",
+      "verdict": "ok",
+      "why": "an optional group is tried at most once"
+    },
+    {
+      "pattern": "(a+)+?",
+      "verdict": "ok",
+      "why": "a lazy outer quantifier bounds the search"
+    },
+    {
+      "pattern": "(a*)?",
+      "verdict": "ok",
+      "why": "optional again, this time around a star"
+    },
+    {
+      "pattern": "(a{2})+",
+      "verdict": "ok",
+      "why": "a bounded {n} cannot explode"
+    },
+    {
+      "pattern": "(a{2,4})+",
+      "verdict": "ok",
+      "why": "a bounded {n,m} cannot explode either"
+    },
+    {
+      "pattern": "([a-z]x)+",
+      "verdict": "ok",
+      "why": "the body's first atom carries no quantifier"
+    },
+    {
+      "pattern": "(\\d)+",
+      "verdict": "ok",
+      "why": "an unquantified escaped atom"
+    },
+    {
+      "pattern": "(-a|-b)*",
+      "verdict": "ok",
+      "why": "branches share a first character but neither is a prefix of the other"
+    },
+    {
+      "pattern": "(cat|dog|bird)*",
+      "verdict": "ok",
+      "why": "three disjoint branches"
+    },
+    {
+      "pattern": "(x[a|b]y)*",
+      "verdict": "ok",
+      "why": "a pipe inside a character class is a literal, not a top-level alternation"
+    },
+    {
+      "pattern": "\\(a+\\)+",
+      "verdict": "ok",
+      "why": "escaped parentheses are literals, so there is no group to repeat"
+    },
+    {
+      "pattern": "(^a)+",
+      "verdict": "ok",
+      "why": "an anchor consumes nothing, so it opens no atom"
+    },
+
+    {
+      "pattern": "(",
+      "verdict": "invalid",
+      "why": "an unclosed group"
+    },
+    {
+      "pattern": "(a+",
+      "verdict": "invalid",
+      "why": "an unclosed group the scanner would otherwise try to analyse"
+    },
+    {
+      "pattern": "([a+)+",
+      "verdict": "invalid",
+      "why": "an unterminated character class swallows the closing paren"
+    },
+    {
+      "pattern": "[z-a]",
+      "verdict": "invalid",
+      "why": "a reversed character range"
+    }
+  ]
+}

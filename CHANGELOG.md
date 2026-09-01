@@ -58,7 +58,7 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
 | Validate 200 link rules         | 50 ms  | 2.8 ms   |
 | Studio initial bundle (gzipped) | 200 kB | 109 kB   |
 
-#### Sprint 02 — Android shell (in progress)
+#### Sprint 02 — Android shell
 
 - Config-driven Kotlin shell: two-phase startup parse, hardened WebView, native
   top bar and tab bar, link routing, connectivity and offline handling.
@@ -66,7 +66,7 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   frame needs, so the native skeleton is drawn before the full config is parsed.
 - `SafeRegex` — a character-budget interrupt so a user-supplied pattern cannot
   hang the UI thread on a device, defending even though Sprint 01 rejects the
-  worst at config time.
+  worst at config time. Sprint 03 added a structural check in front of it.
 - `OriginAllowlist` — the security boundary the JavaScript bridge will be gated
   on in Sprint 09, built before there is anything privileged to gate.
 - WebView hardening: file and content access off, universal file access off,
@@ -76,6 +76,32 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
 - Renderer-process death recovers by rebuilding the web view instead of taking
   the app down with it.
 - 68 JVM unit tests, including the link-routing and first-frame-parse budgets.
+
+#### Sprint 03 — iOS shell
+
+- Config-driven Swift shell at parity with the Android one: two-phase startup
+  parse, hardened `WKWebView`, native chrome, link routing, offline handling.
+- Split into `ShellCore` (Foundation only, builds and tests on Linux) and
+  `ShellApp` (UIKit and WebKit, Apple-only), so the shell's logic is developed
+  and tested without a Mac and metered macOS minutes are spent only on building,
+  signing and installing. Recorded as ADR 0005.
+- `AuthenticationRouter` — OAuth is routed to `ASWebAuthenticationSession`
+  rather than the web view. Identity providers refuse to authenticate in an
+  embedded browser and Google blocks `WKWebView` sign-in outright, so without
+  this a shell cannot log users in at all.
+- Shared routing contract, `tests/fixtures/routing/link-routing.json`: 21 cases
+  over 7 rule sets, read by both shells, which share no routing code.
+- Shared backtracking-heuristic contract,
+  `tests/fixtures/regex-safety/patterns.json`: 30 patterns, read by all four
+  implementations — the studio, the API, and both shells.
+- `BacktrackingCheck` in Swift and Kotlin — a port of the studio's `checkRegex`,
+  so both shells refuse a dangerous pattern rather than merely surviving it.
+- Codemagic pipeline (`codemagic.yaml`, at the repository root) with an unsigned
+  verification workflow that needs no Apple account, and a TestFlight workflow
+  that runs only on `main`.
+- iOS CI: `ShellCore` built and tested on free Linux minutes on every pull
+  request; the macOS job is opt-in.
+- 48 Swift unit tests. Programme total 559.
 
 ### Changed
 
@@ -92,3 +118,10 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   non-ASCII. A decomposed accent would have hashed differently in each language.
 - `RenderProcessGoneDetail#didCrash` is API 26 and `minSdk` is 24, so renderer
   recovery would have crashed on Android 7.
+- The iOS backtracking defence had no effect whatsoever. It enforced a deadline
+  from the block passed to `enumerateMatches`, which `NSRegularExpression` calls
+  for matches and not for progress; ICU never yields while backtracking, so the
+  deadline was never evaluated once. `^(a+)+$` hung the Swift suite indefinitely
+  while Android passed the same case in under a millisecond. Patterns are now
+  refused structurally, before they can run. Found by the shared routing corpus
+  on its first run.

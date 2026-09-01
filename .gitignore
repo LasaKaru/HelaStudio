@@ -30,6 +30,13 @@ Pods/
 *.xcuserdatad/
 *.xcworkspace/xcuserdata/
 .swiftpm/
+# SwiftPM's build tree. Note this is `.build`, not the `build/` above — the
+# leading dot makes it a different name, and without this line a `swift build`
+# leaves several thousand files staged.
+.build/
+# Generated from project.yml by XcodeGen, never committed: a .pbxproj is a merge
+# conflict generator, and Sprint 04 generates one from a config anyway.
+*.xcodeproj/
 
 # ── Secrets & signing material — never, under any circumstance ─────────
 *.p8

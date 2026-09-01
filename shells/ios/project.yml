@@ -1,0 +1,89 @@
+# XcodeGen spec.
+#
+# The Xcode project is generated rather than committed. A .pbxproj is a merge
+# conflict generator, and — more to the point for this product — Sprint 04 has
+# to *generate* an iOS project from a config. A declarative spec is a much
+# better target for that than hand-edited XML, so the shell is built the way the
+# generator will have to build it.
+#
+#   brew install xcodegen && xcodegen generate
+name: Shellwright
+options:
+  bundleIdPrefix: dev.shellwright
+  deploymentTarget:
+    iOS: '15.0'
+  createIntermediateGroups: true
+
+packages:
+  ShellCore:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Warnings are errors here for the same reason they are everywhere else in
+    # this repository (01_ENGINEERING_STANDARDS.md §3).
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+  configs:
+    release:
+      # Whole-module optimisation and dead-code stripping: the IPA budget is
+      # 25 MB and the startup budget is 300 ms to first frame.
+      SWIFT_COMPILATION_MODE: wholemodule
+      SWIFT_OPTIMIZATION_LEVEL: '-O'
+      DEAD_CODE_STRIPPING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      ENABLE_TESTABILITY: NO
+
+targets:
+  Shellwright:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/ShellApp
+      - path: Resources
+    dependencies:
+      - package: ShellCore
+        product: ShellCore
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: $(PRODUCT_NAME)
+        CFBundleShortVersionString: '1.0.0'
+        CFBundleVersion: '1'
+        UILaunchScreen:
+          # A storyboard-free launch screen whose colour the generator rewrites
+          # from `config.branding.splash.backgroundColor`. A static image could
+          # not adapt to the config.
+          UIColorName: SplashBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+        # ⚠️ These strings must exist before the capability is ever reached, or
+        # the app crashes the moment a web form asks for the camera. Code
+        # generation rewrites them per config; they are removed entirely when
+        # the config does not request the permission, because an unjustified
+        # permission is a common rejection reason.
+        NSCameraUsageDescription: >-
+          Take photos to upload.
+        NSMicrophoneUsageDescription: >-
+          Record audio to upload.
+        NSPhotoLibraryUsageDescription: >-
+          Choose photos to upload.
+        NSLocationWhenInUseUsageDescription: >-
+          Show you content relevant to where you are.
+
+        # ⚠️ No NSAllowsArbitraryLoads. Sprint 01 rejects http:// at config
+        # time, so App Transport Security stays strict — and an ATS exception
+        # is a flag during App Review.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.shellwright.shell
+        TARGETED_DEVICE_FAMILY: '1,2'

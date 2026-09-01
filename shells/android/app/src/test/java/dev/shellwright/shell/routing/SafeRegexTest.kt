@@ -31,13 +31,26 @@ class SafeRegexTest {
     }
 
     @Test
-    fun `an exponential pattern gives up instead of hanging`() {
-        val regex = SafeRegex.compile("^(a+)+${'$'}")
+    fun `an exponential pattern is refused before it can ever run`() {
+        // The first layer: the same structural check the studio, the API and
+        // the iOS shell run. Refusing here rather than surviving it at match
+        // time is what keeps the two shells agreeing about what a config means.
+        assertThat(SafeRegex.compile("^(a+)+${'$'}")).isNull()
+    }
+
+    @Test
+    fun `the budget bounds a slow pattern the structural check does not catch`() {
+        // Nine sequential stars and not a single group, so nothing in
+        // BacktrackingCheck has anything to look at — it is polynomial rather
+        // than exponential, and it compiles. It still takes the better part of a
+        // second on this input, on the UI thread, on every navigation.
+        //
+        // This is the whole value of the second layer, and the gap the iOS
+        // shell has to live with: see docs/qa/shell-parity.md.
+        val regex = SafeRegex.compile("^a*a*a*a*a*a*a*a*a*b${'$'}")
         assertThat(regex).isNotNull()
 
-        // Without the budget this input backtracks for longer than a phone's
-        // ANR timeout, on the UI thread, on every navigation.
-        val attack = "a".repeat(64) + "!"
+        val attack = "a".repeat(28)
 
         val elapsedMs = measureNanoTime {
             assertThat(regex!!.matches(attack)).isFalse()

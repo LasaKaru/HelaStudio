@@ -1,0 +1,220 @@
+{
+  "$comment": [
+    "The routing contract between the Android and iOS shells.",
+    "Both LinkRouter implementations read this file and must reach identical",
+    "decisions for every case. The behaviour is ported between platforms; the",
+    "code is not, so this corpus is the only thing holding them together.",
+    "Adding a routing behaviour means adding cases here first.",
+    "Action names match LinkAction.fixtureName on both sides."
+  ],
+  "ruleSets": {
+    "maximal": [
+      {
+        "id": "app",
+        "pattern": "^https://app\\.acme\\.com",
+        "action": "internal"
+      },
+      {
+        "id": "help",
+        "pattern": "^https://help\\.acme\\.com",
+        "action": "readerModal"
+      },
+      {
+        "id": "ads",
+        "pattern": "^https://ads\\.example\\.com",
+        "action": "block"
+      },
+      {
+        "id": "fallback",
+        "pattern": ".*",
+        "action": "externalBrowser"
+      }
+    ],
+    "noCatchAll": [
+      {
+        "id": "app",
+        "pattern": "^https://app\\.acme\\.com",
+        "action": "internal"
+      }
+    ],
+    "catchAllInternal": [
+      {
+        "id": "everything",
+        "pattern": ".*",
+        "action": "internal"
+      }
+    ],
+    "shadowed": [
+      {
+        "id": "everything",
+        "pattern": ".*",
+        "action": "internal"
+      },
+      {
+        "id": "help",
+        "pattern": "^https://help\\.acme\\.com",
+        "action": "readerModal"
+      }
+    ],
+    "hostile": [
+      {
+        "id": "slow",
+        "pattern": "^(a+)+$",
+        "action": "internal"
+      },
+      {
+        "id": "fallback",
+        "pattern": ".*",
+        "action": "externalBrowser"
+      }
+    ],
+    "broken": [
+      {
+        "id": "uncompilable",
+        "pattern": "^https://app\\.acme\\.com(",
+        "action": "internal"
+      },
+      {
+        "id": "fallback",
+        "pattern": ".*",
+        "action": "externalBrowser"
+      }
+    ],
+    "futureAction": [
+      {
+        "id": "unknown",
+        "pattern": "^https://app\\.acme\\.com",
+        "action": "holographicProjection"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "why": "the first matching rule wins, not the most specific",
+      "rules": "maximal",
+      "url": "https://app.acme.com/orders",
+      "expect": "internal"
+    },
+    {
+      "why": "a later, narrower rule does not override an earlier broad one",
+      "rules": "shadowed",
+      "url": "https://help.acme.com/faq",
+      "expect": "internal"
+    },
+    {
+      "why": "reader modal routes by its own rule",
+      "rules": "maximal",
+      "url": "https://help.acme.com/faq",
+      "expect": "readerModal"
+    },
+    {
+      "why": "a block rule refuses the navigation",
+      "rules": "maximal",
+      "url": "https://ads.example.com/track",
+      "expect": "block"
+    },
+    {
+      "why": "an unmatched url falls through to the browser",
+      "rules": "noCatchAll",
+      "url": "https://external.example.com/x",
+      "expect": "externalBrowser"
+    },
+    {
+      "why": "mail belongs to the mail app whatever the rules say",
+      "rules": "catchAllInternal",
+      "url": "mailto:hello@acme.com",
+      "expect": "external"
+    },
+    {
+      "why": "telephone links leave the app",
+      "rules": "catchAllInternal",
+      "url": "tel:+94112345678",
+      "expect": "external"
+    },
+    {
+      "why": "sms links leave the app",
+      "rules": "catchAllInternal",
+      "url": "sms:+94112345678",
+      "expect": "external"
+    },
+    {
+      "why": "map links leave the app",
+      "rules": "catchAllInternal",
+      "url": "geo:6.9271,79.8612",
+      "expect": "external"
+    },
+    {
+      "why": "an unknown scheme is handed to whatever claims it",
+      "rules": "catchAllInternal",
+      "url": "acmeapp://orders/42",
+      "expect": "external"
+    },
+    {
+      "why": "a file url could read the app's own private storage",
+      "rules": "catchAllInternal",
+      "url": "file:///data/data/dev.shellwright.shell/x.db",
+      "expect": "block"
+    },
+    {
+      "why": "javascript urls are script injection by another name",
+      "rules": "catchAllInternal",
+      "url": "javascript:alert(1)",
+      "expect": "block"
+    },
+    {
+      "why": "data urls can carry a whole page with the app's privileges",
+      "rules": "catchAllInternal",
+      "url": "data:text/html,<script>alert(1)</script>",
+      "expect": "block"
+    },
+    {
+      "why": "a document extension goes to the download flow",
+      "rules": "maximal",
+      "url": "https://app.acme.com/invoice.pdf",
+      "expect": "download"
+    },
+    {
+      "why": "a query string does not hide the extension",
+      "rules": "maximal",
+      "url": "https://app.acme.com/export.csv?range=90d",
+      "expect": "download"
+    },
+    {
+      "why": "a fragment does not hide the extension",
+      "rules": "maximal",
+      "url": "https://app.acme.com/report.xlsx#sheet2",
+      "expect": "download"
+    },
+    {
+      "why": "a dot in a path segment is not a file extension",
+      "rules": "maximal",
+      "url": "https://app.acme.com/v1.2/release-notes",
+      "expect": "internal"
+    },
+    {
+      "why": "an unknown extension is an ordinary page",
+      "rules": "maximal",
+      "url": "https://app.acme.com/page.html",
+      "expect": "internal"
+    },
+    {
+      "why": "a pattern that does not compile is skipped, not fatal",
+      "rules": "broken",
+      "url": "https://app.acme.com/x",
+      "expect": "externalBrowser"
+    },
+    {
+      "why": "an action added by a newer schema must not crash a shell at version N",
+      "rules": "futureAction",
+      "url": "https://app.acme.com/x",
+      "expect": "externalBrowser"
+    },
+    {
+      "why": "a catastrophic pattern must not match and must not hang",
+      "rules": "hostile",
+      "url": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!",
+      "expect": "externalBrowser",
+      "maxMillis": 500
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+# Codemagic builds the iOS shell.
+#
+# ⚠️ The point of this file is not convenience. It is the proof behind the
+# largest cost assumption in the business plan: that signed iOS builds can be
+# produced without owning Apple hardware. If this pipeline works on the free
+# tier, the macOS fleet problem in master spec §1.4 is a Phase 3 problem rather
+# than a Phase 0 one.
+#
+# Numbers from every run go into COSTS.md. They validate or invalidate §16.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# This file must live in the repository root — that is the only place Codemagic
+# looks, and "Check for configuration file" fails silently if it is anywhere
+# else. The iOS project itself lives in shells/ios, which is what the
+# `working_directory` on each workflow is for.
+#
+# ⚠️ Shellwright's iOS shell is native Swift — SwiftPM plus XcodeGen. Codemagic's
+# onboarding offers a React Native quick start by default; it does not apply
+# here, and following it would configure a toolchain this repository does not
+# use.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# On spending macOS minutes
+#
+# The free tier is 500 macOS minutes a month, and these are the only genuinely
+# scarce minutes in the programme. Neither workflow below is triggered by a
+# pull request, on purpose: every pull request already runs the ShellCore test
+# suite on free Linux minutes in GitHub Actions (.github/workflows/ios.yml), and
+# that is where the shell's logic lives. See ADR 0005.
+#
+# So: Linux answers "is it correct", and these workflows answer "does it build,
+# sign, install, and look right". Paying macOS rates for the first question
+# would spend the month's allowance in about a week.
+#
+# Start `ios-verify` by hand from the Codemagic UI. It needs no Apple account
+# and is the cheapest proof that the toolchain works end to end.
+
+workflows:
+  ios-verify:
+    name: iOS — unsigned verification build
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    working_directory: shells/ios
+
+    # No credentials at all. This runs before Apple enrolment exists, and can be
+    # run from any branch without exposing signing material.
+    #
+    # ▶ Run this one first. If it goes green, the toolchain assumption behind
+    #   Phase 0 holds, and everything left is paperwork.
+    environment:
+      xcode: latest
+
+    cache:
+      cache_paths:
+        - ~/Library/Developer/Xcode/DerivedData
+        - $HOME/Library/Caches/org.swift.swiftpm
+
+    scripts:
+      - name: Generate the Xcode project
+        # The project is generated, never committed: a .pbxproj is a merge
+        # conflict generator, and Sprint 04 has to generate one from a config
+        # anyway. Building it the way the generator will is the point.
+        script: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Test ShellCore
+        # The cross-platform core, tested here as well as on Linux CI. Same
+        # tests, two toolchains — a divergence between Swift on Linux and Swift
+        # on Darwin would otherwise surface as a device-only bug. It reads the
+        # shared corpora in tests/fixtures/, which is why the checkout has to be
+        # the whole repository rather than shells/ios alone.
+        script: swift test
+
+      - name: Build without signing
+        script: |
+          xcodebuild build \
+            -project Shellwright.xcodeproj \
+            -scheme Shellwright \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO
+
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-testflight:
+    name: iOS — build and ship to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: shells/ios
+
+    environment:
+      groups:
+        # ⚠️ Encrypted in Codemagic, never in this repository:
+        #   APP_STORE_CONNECT_ISSUER_ID
+        #   APP_STORE_CONNECT_KEY_IDENTIFIER
+        #   APP_STORE_CONNECT_PRIVATE_KEY   (the .p8, downloadable exactly once)
+        #
+        # This workflow cannot run until the Apple Developer Program enrolment
+        # in ACTION_REQUIRED.md is complete and this group exists. It will fail
+        # at "Fetch signing files" until then, which is the correct failure.
+        - appstore_credentials
+      vars:
+        BUNDLE_ID: 'dev.shellwright.shell'
+        XCODE_SCHEME: 'Shellwright'
+      xcode: latest
+
+    # ⚠️ Cache aggressively even though these minutes are free-ish. DerivedData
+    # and the SwiftPM cache roughly halve an iOS build, and the cost-per-build
+    # figure that Sprint 08's economics depend on has to be measured in the
+    # production configuration — which is with caching on.
+    cache:
+      cache_paths:
+        - ~/Library/Developer/Xcode/DerivedData
+        - $HOME/Library/Caches/org.swift.swiftpm
+        - $HOME/.cache/xcodegen
+
+    # Only what has already passed review on main is worth a signed build and a
+    # TestFlight slot.
+    triggering:
+      events: [push]
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Generate the Xcode project
+        script: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Test ShellCore
+        script: swift test
+
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build the IPA
+        script: |
+          xcode-project build-ipa \
+            --project "Shellwright.xcodeproj" \
+            --scheme "$XCODE_SCHEME"
+
+      - name: Check the size budget
+        # 03_TEST_STRATEGY.md §12 budgets the IPA at 25 MB. Raising it needs an
+        # explicit, justified decision — not a quiet edit to this number.
+        script: |
+          IPA=$(find build/ios/ipa -name '*.ipa' | head -1)
+          BYTES=$(stat -f%z "$IPA")
+          LIMIT=$((25 * 1024 * 1024))
+          echo "IPA: $IPA"
+          echo "Size: $((BYTES / 1024)) kB against a $((LIMIT / 1024)) kB budget"
+          [ "$BYTES" -le "$LIMIT" ] || { echo "IPA over budget"; exit 1; }
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Internal TestFlight needs no App Review. External does — and an
+        # external submission is the cheapest possible probe of how App Review
+        # treats a shell app, which is intelligence worth more than it costs.
+        submit_to_testflight: true
+# Deliberately not here: an Android workflow.
+#
+# Codemagic can build Android, but GitHub Actions already does it on free Linux
+# minutes (.github/workflows/android.yml), and every Codemagic build consumes the
+# same allowance whatever platform it targets. Spending a scarce macOS-tier
+# allowance on a build that is free elsewhere would be a straight loss.

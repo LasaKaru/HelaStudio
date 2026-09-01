@@ -13,11 +13,18 @@ import java.util.regex.PatternSyntaxException
  * rule existed, and a pattern that is merely slow rather than exponential still
  * runs on every navigation.
  *
- * The defence is a character-budget interrupt. [Matcher] polls the underlying
- * [CharSequence] as it backtracks, so counting reads gives a cheap, allocation-
- * free ceiling on the work any single match may do — no thread, no timer, and
- * no cost at all on the overwhelming majority of matches, which finish in a few
- * hundred reads.
+ * The defence has two layers. [BacktrackingCheck] refuses a dangerous *shape*
+ * before the pattern is ever compiled — the same structural scan the studio and
+ * the API run, and the only defence the iOS shell can have, since ICU cannot be
+ * interrupted mid-match. Behind it, a character-budget interrupt bounds whatever
+ * the scan misses: [Matcher] polls the underlying [CharSequence] as it
+ * backtracks, so counting reads gives a cheap, allocation-free ceiling on the
+ * work any single match may do — no thread, no timer, and no cost at all on the
+ * overwhelming majority of matches, which finish in a few hundred reads.
+ *
+ * Only the first layer exists on both platforms, so only the first layer decides
+ * behaviour the two shells must share. The budget is Android keeping an
+ * advantage it happens to have, not a difference in what a config means.
  */
 public class SafeRegex private constructor(
     private val pattern: Pattern,
@@ -47,14 +54,19 @@ public class SafeRegex private constructor(
         private const val DEFAULT_BUDGET = 200_000
 
         /**
-         * Compiles [pattern], or returns null if it does not compile.
+         * Compiles [pattern], or returns null if it does not compile or is
+         * unsafe to run.
          *
          * Compilation happens once, at startup, never per navigation.
          */
-        public fun compile(pattern: String, budget: Int = DEFAULT_BUDGET): SafeRegex? = try {
-            SafeRegex(Pattern.compile(pattern), budget)
-        } catch (_: PatternSyntaxException) {
-            null
+        public fun compile(pattern: String, budget: Int = DEFAULT_BUDGET): SafeRegex? {
+            if (BacktrackingCheck.verdict(pattern) !is RegexVerdict.Ok) return null
+
+            return try {
+                SafeRegex(Pattern.compile(pattern), budget)
+            } catch (_: PatternSyntaxException) {
+                null
+            }
         }
     }
 

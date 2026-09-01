@@ -14,6 +14,8 @@ internal static class Fixtures
 
     internal static string ExpectedDir => Path.Combine(Root, "expected");
 
+    internal static string RegexSafetyDir => Path.Combine(Root, "regex-safety");
+
     /// <summary>Reads one fixture config by file name.</summary>
     internal static JsonObject ReadConfig(string name) => ReadJson(Path.Combine(ConfigDir, name));
 
