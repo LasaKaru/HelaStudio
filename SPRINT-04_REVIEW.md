@@ -71,8 +71,8 @@ binary resource encoding.
 | ------------------------- | ----- | ----------------------------------- |
 | Codegen of `maximal.json` | 3 s   | asserted, `TC-S04-PRF-001`          |
 | Generated release APK     | 12 MB | **820 kB**, same as the shell's own |
-| Codegen tests             | —     | **77 green**                        |
-| Programme total           | —     | **646 green**                       |
+| Codegen tests             | —     | **89 green**                        |
+| Programme total           | —     | **660 green**                       |
 
 ## Three bugs, and which mechanism caught each
 

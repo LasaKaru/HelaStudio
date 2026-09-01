@@ -318,11 +318,18 @@ backtracking defence had no effect at all and hung the suite. See
 | T-04.6 | Nightly real-build verification         | `TC-S04-BLD-001`, `TC-S04-BLD-003`           | ✅ 7-fixture matrix, release build and size budget                |
 |        | Emulator smoke test                     | `TC-S04-BLD-002`                             | ⏳ needs emulator time                                            |
 
-Codegen suite: **77 tests**, 0 failures.
+Codegen suite: **89 tests**, 0 failures.
 
 ⚠️ Two of the sprint's three bugs were caught only by running Gradle on the
 generated output — one by no unit test and no golden file, one by no fixture at
 all. See `SPRINT-04_REVIEW.md`; it is the argument for the nightly real-build
 job being required rather than optional.
 
-Programme total: **646 tests** — 226 TypeScript, 247 C#, 125 Kotlin, 48 Swift.
+Programme total: **660 tests** — 228 TypeScript (226 config-schema, 2 studio),
+259 C#, 125 Kotlin, 48 Swift.
+
+⚠️ Run the TypeScript suites through `pnpm test`, not `vitest` from the
+repository root. The studio's two tests need the jsdom environment its own
+`vitest.config.ts` sets, and a root-level run silently drops that config and
+fails them with `document is not defined` — a failure in the invocation, not in
+the code.

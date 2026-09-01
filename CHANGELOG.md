@@ -126,7 +126,7 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   budget per fixture.
 - Two fixtures added for bugs actually found: `edge-hostile-text.json`
   (`@Bob's "Diner" & Grill <$5`) and `edge-portrait-locked.json`.
-- 77 codegen tests. Programme total 646.
+- 89 codegen tests. Programme total 660.
 
 ### Changed
 
