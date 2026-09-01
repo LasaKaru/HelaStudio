@@ -53,6 +53,14 @@ are not secrets. They are digests of public fixture configs, reproducible by
 anyone with the repository, and they are named "key" because that is what the
 build cache calls them.
 
+⚠️ The path pattern accepts any depth under generated/, which is not laziness:
+gitleaks in CI scans git *history*, not just the working tree, and the corpus
+gained a platform directory partway through Sprint 05. A pattern pinned to
+today's depth stops matching yesterday's commits, and the job fails on files
+that have not existed for hours. Matching every depth under that one directory
+is both narrower than it looks and stable against the corpus being reorganised
+again.
+
 ⚠️ Only the manifest itself is allowed, not the tree around it. The generated
 appconfig.json beside it is still scanned, and so is every fixture config it was
 generated from — a real credential in a fixture would still be caught twice.
@@ -68,5 +76,5 @@ paths = [
   '''^packages/config-schema/dotnet/Shellwright\.ConfigSchema/Rules/SecretRules\.cs$''',
   '''^docs/reference/diagnostics\.md$''',
   '''^\.gitleaks\.toml$''',
-  '''^tests/fixtures/generated/[^/]+/[^/]+/files/\.shellwright/manifest\.json$''',
+  '''^tests/fixtures/generated/(?:[^/]+/)+files/\.shellwright/manifest\.json$''',
 ]
