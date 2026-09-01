@@ -256,6 +256,21 @@ public sealed class AndroidIconTests
         await act.Should().ThrowAsync<AssetException>();
     }
 
+    /// <summary>A customer's project does not ship the shell's own test suite.</summary>
+    /// <remarks>
+    /// Those tests read <c>tests/fixtures/</c>, which does not exist in a
+    /// generated project. A customer opening their exported source to find
+    /// someone else's failing tests is being handed confusion, not value.
+    /// </remarks>
+    [Fact]
+    public async Task GeneratedProjectsDoNotShipTheShellsTests()
+    {
+        var sink = await GenerateAsync("minimal.json");
+
+        sink.Files.Should().NotContain(file =>
+            file.Path.StartsWith("app/src/test/", StringComparison.Ordinal));
+    }
+
     /// <summary>Location is granted as both fine and coarse, never fine alone.</summary>
     /// <remarks>
     /// ⚠️ Since Android 12 a FINE-only request fails at the permission dialog:

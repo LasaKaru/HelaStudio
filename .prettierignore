@@ -13,3 +13,11 @@ pnpm-lock.yaml
 # that compare them — the formatter is not the authority here.
 tests/fixtures/generated
 tests/fixtures/expected
+
+# Shell files that are rendered by tools/ApproveGolden from templates/, not
+# written by hand. Reformatting them would make the committed file disagree with
+# its own template and fail ShellTemplateTests — the formatter is not the
+# authority on generated output, the generator is.
+shells/ios/project.yml
+shells/ios/Resources/appconfig.json
+shells/android/app/src/main/assets/appconfig.json

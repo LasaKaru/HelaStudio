@@ -46,6 +46,97 @@ jobs:
       - name: Performance budgets
         run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
 
+  # TC-S05-BLD-001. The only place iOS generation meets a real toolchain.
+  #
+  # ⚠️ Opt-in, and that is a cost decision rather than a preference. GitHub
+  # bills macOS at ten times the Linux rate against a fixed monthly allowance,
+  # and this matrix would spend it in days. The sprint plan's answer is to run
+  # it on the *public* shell repository, where macOS minutes are unmetered — so
+  # this becomes a scheduled job the moment shells/ios is extracted per ADR 0002
+  # (ACTION_REQUIRED.md item 9). Until then it runs by hand.
+  #
+  # Codemagic minutes are deliberately not spent here: those are reserved for
+  # signed builds, which this is not.
+  generated-ios-builds:
+    name: Generated Xcode project (${{ matrix.fixture }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture:
+          - minimal
+          - maximal
+          - unicode
+          - edge-hostile-text
+          - edge-portrait-locked
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Generate the project
+        run: dotnet run --project tools/ApproveGolden -- emit ${{ matrix.fixture }}.json generated ios
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # The check the Linux suite structurally cannot make: plutil is macOS-only,
+      # and a malformed plist is not a build warning on iOS — the file is
+      # ignored, or the build fails naming neither the key nor the cause.
+      - name: Validate the property lists
+        working-directory: generated
+        run: |
+          for plist in Resources/Shellwright.entitlements Resources/PrivacyInfo.xcprivacy; do
+            echo "Checking $plist"
+            plutil -lint "$plist"
+          done
+
+      - name: Generate the Xcode project
+        working-directory: generated
+        run: xcodegen generate
+
+      # TC-S05-GEN-028. A scheme Xcode did not mark shared is invisible to
+      # xcodebuild, which is the classic first-CI-run failure on iOS: it works
+      # on the machine that created it and nowhere else.
+      - name: The scheme is shared
+        working-directory: generated
+        run: xcodebuild -list -project *.xcodeproj
+
+      - name: Build for the simulator
+        working-directory: generated
+        run: >
+          xcodebuild build
+          -project $(ls -d *.xcodeproj)
+          -scheme "$(basename $(ls -d *.xcodeproj) .xcodeproj)"
+          -destination 'platform=iOS Simulator,name=iPhone 16'
+          CODE_SIGNING_ALLOWED=NO
+
+      # TC-S05-GEN-004. XcodeGen's determinism is a property of XcodeGen, not of
+      # this generator, so it is asserted where the tool actually runs.
+      - name: Generating twice is byte-identical
+        working-directory: generated
+        run: |
+          find . -name '*.pbxproj' -exec shasum {} \; | sort > /tmp/first.txt
+          rm -rf ./*.xcodeproj
+          xcodegen generate
+          find . -name '*.pbxproj' -exec shasum {} \; | sort > /tmp/second.txt
+          diff /tmp/first.txt /tmp/second.txt \
+            || { echo "::error::XcodeGen output is not reproducible for ${{ matrix.fixture }}."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: generated-ios-${{ matrix.fixture }}
+          path: |
+            generated/project.yml
+            generated/Resources/*.plist
+            generated/Resources/*.entitlements
+            generated/Resources/*.xcprivacy
+          if-no-files-found: ignore
+
   # TC-S04-BLD-001. Six fixtures spanning the shapes that break codegen:
   # nothing, everything, non-Latin script, punctuation that breaks aapt2, many
   # tabs, many link rules.

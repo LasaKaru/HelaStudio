@@ -289,6 +289,38 @@ public sealed class IosTests
         }
     }
 
+    /// <summary>
+    /// A customer's project does not ship the shell's own test suite.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Those tests read <c>tests/fixtures/</c>, which does not exist in a
+    /// generated project, so they could not run there even if anyone wanted
+    /// them to. Worse, <c>Package.swift</c> would still declare the target, and
+    /// SwiftPM fails on a target whose directory is missing — before compiling
+    /// a line. Dropping the directory and the target has to happen together.
+    /// </remarks>
+    [Fact]
+    public async Task GeneratedProjectsDoNotShipTheShellsTests()
+    {
+        var sink = await GenerateAsync("minimal.json");
+
+        sink.Files.Should().NotContain(file => file.Path.StartsWith("Tests/", StringComparison.Ordinal));
+        sink.Text("Package.swift").Should().NotContain("testTarget");
+    }
+
+    /// <summary>The build script arrives runnable.</summary>
+    /// <remarks>
+    /// A source-export promise the customer has to <c>chmod</c> first is not
+    /// much of a promise.
+    /// </remarks>
+    [Fact]
+    public async Task BuildScriptIsExecutable()
+    {
+        var sink = await GenerateAsync("maximal.json");
+
+        sink.Find("build.sh")!.Mode.Should().Be(FilePermissions.Executable);
+    }
+
     /// <summary>The manifest records the iOS toolchain, including XcodeGen.</summary>
     /// <remarks>
     /// ⚠️ XcodeGen decides the bytes of the project it produces, and Xcode's

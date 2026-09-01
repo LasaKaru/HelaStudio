@@ -107,8 +107,16 @@ public sealed class TemplateSource
                 }
 
                 var output = relative[(TemplateDirectory.Length + 1)..^TemplateSuffix.Length];
+                // ⚠️ Mode is decided from the *output* path, not the template
+                // path. build.sh.tmpl is not itself a script; build.sh is, and
+                // a generated project whose build script arrives at 0644 is a
+                // source-export promise the customer has to chmod before they
+                // can use it.
                 templated[output] = new TemplateFile(
-                    output, [.. bytes], FilePermissions.Regular, IsTemplate: true);
+                    output,
+                    [.. bytes],
+                    IsScript(output) ? FilePermissions.Executable : FilePermissions.Regular,
+                    IsTemplate: true);
             }
             else
             {
@@ -116,12 +124,10 @@ public sealed class TemplateSource
                     relative,
                     [.. bytes],
 
-                    // gradlew must stay runnable. Everything else is 0644, set
+                    // Scripts must stay runnable. Everything else is 0644, set
                     // explicitly rather than inherited, because a developer's
                     // umask is not an input the build cache knows about.
-                    relative.EndsWith("gradlew", StringComparison.Ordinal)
-                        ? FilePermissions.Executable
-                        : FilePermissions.Regular,
+                    IsScript(relative) ? FilePermissions.Executable : FilePermissions.Regular,
                     false);
             }
         }
@@ -149,6 +155,11 @@ public sealed class TemplateSource
                 .OrderBy(file => file.OutputPath, StringComparer.Ordinal),
         ];
     }
+
+    /// <summary>Whether a path is something a person is expected to run.</summary>
+    private static bool IsScript(string relativePath) =>
+        relativePath.EndsWith("gradlew", StringComparison.Ordinal)
+        || relativePath.EndsWith(".sh", StringComparison.Ordinal);
 
     private static bool IsExcluded(string relativePath)
     {

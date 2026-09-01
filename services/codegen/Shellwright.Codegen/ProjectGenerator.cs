@@ -93,6 +93,21 @@ public abstract class ProjectGenerator : IProjectGenerator
     /// <returns>The extra files.</returns>
     protected virtual ImmutableArray<GeneratedFile> PlatformFiles(JsonObject resolved) => [];
 
+    /// <summary>
+    /// Path prefixes that belong to the shell but not to a generated project.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The shell's own test suite, above all. It is written against
+    /// <c>tests/fixtures/</c>, which does not exist in a customer's project, so
+    /// it could not run there even if anyone wanted it to — and a customer
+    /// opening their exported source to find someone else's tests is being
+    /// handed confusion, not value.
+    ///
+    /// This applies only to generated output. The shell keeps its tests; that
+    /// is the whole point of the shell being a real app.
+    /// </remarks>
+    protected virtual ImmutableArray<string> ExcludedFromGenerated => [];
+
     /// <summary>Copied template paths this config makes redundant.</summary>
     /// <param name="resolved">A resolved configuration.</param>
     /// <returns>Paths to drop.</returns>
@@ -117,7 +132,10 @@ public abstract class ProjectGenerator : IProjectGenerator
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (AlwaysGenerated.Contains(template.OutputPath) || superseded.Contains(template.OutputPath))
+            if (AlwaysGenerated.Contains(template.OutputPath)
+                || superseded.Contains(template.OutputPath)
+                || ExcludedFromGenerated.Any(prefix =>
+                    template.OutputPath.StartsWith(prefix, StringComparison.Ordinal)))
             {
                 continue;
             }

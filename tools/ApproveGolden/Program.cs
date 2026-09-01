@@ -20,9 +20,10 @@ Console.WriteLine($"Repository: {repoRoot}");
 // `emit <fixture> <directory>` writes one project to disk instead. This is what
 // the nightly real-build job uses: golden files prove the generator is stable,
 // they do not prove its output compiles, and only a real Gradle build does that.
-if (args is ["emit", var fixture, var outputDirectory])
+if (args is ["emit", var fixture, var outputDirectory, ..])
 {
-    var sink = await GoldenCorpus.GenerateAsync(repoRoot, fixture).ConfigureAwait(false);
+    var platform = args.Length > 3 ? args[3] : "android";
+    var sink = await GoldenCorpus.GenerateAsync(repoRoot, fixture, platform).ConfigureAwait(false);
     var target = new DirectoryFileSink(outputDirectory);
 
     foreach (var file in sink.Files)
@@ -30,7 +31,7 @@ if (args is ["emit", var fixture, var outputDirectory])
         await target.WriteAsync(file).ConfigureAwait(false);
     }
 
-    Console.WriteLine($"Wrote {sink.Files.Count} files for {fixture} to {outputDirectory}");
+    Console.WriteLine($"Wrote {sink.Files.Count} {platform} files for {fixture} to {outputDirectory}");
     return 0;
 }
 
@@ -57,7 +58,14 @@ static async Task RegenerateShellAsync(string repoRoot, string platform)
 
     ProjectGenerator generator = platform == "android"
         ? new AndroidProjectGenerator(new TemplateSource(shell), assets)
-        : new Shellwright.Codegen.Ios.IosProjectGenerator(new TemplateSource(shell), assets);
+
+        // ⚠️ The shell renders with its own tests kept. A generated project does
+        // not: see IosProjectGenerator.ExtraValues. This is the one place the
+        // shell and a generated project legitimately differ, and it is why the
+        // shell can still be the template — it is the same tree with one flag
+        // flipped, not a fork.
+        : new Shellwright.Codegen.Ios.IosProjectGenerator(
+            new TemplateSource(shell), assets, includeTests: true);
 
     var toolchain = platform == "android" ? ToolchainDescriptor.Android : ToolchainDescriptor.Ios;
 

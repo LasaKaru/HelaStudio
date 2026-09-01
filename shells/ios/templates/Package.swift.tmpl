@@ -16,7 +16,7 @@ import PackageDescription
 // `java.net.URI` rather than `android.net.Uri`: the parts most worth testing are
 // deliberately kept free of the platform.
 let package = Package(
-    name: "shellwright_dev",
+    name: "{{ projectName }}",
     platforms: [.iOS(.v15), .macOS(.v13)],
     products: [
         .library(name: "ShellCore", targets: ["ShellCore"]),
@@ -30,6 +30,7 @@ let package = Package(
             // benefit in a package this size.
             swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
         ),
+{{~ if includeTests ~}}
         .testTarget(
             name: "ShellCoreTests",
             dependencies: ["ShellCore"],
@@ -38,5 +39,6 @@ let package = Package(
             // validators must read the same bytes.
             swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
         ),
+{{~ end ~}}
     ]
 )

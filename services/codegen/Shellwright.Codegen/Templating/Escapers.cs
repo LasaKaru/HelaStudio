@@ -26,6 +26,9 @@ public enum TemplateFormat
     /// <summary>A double-quoted YAML scalar, without the surrounding quotes.</summary>
     Yaml,
 
+    /// <summary>A Swift string literal, without the surrounding quotes.</summary>
+    Swift,
+
     /// <summary>No escaping. Only for values that are not attacker-influenced.</summary>
     None,
 }
@@ -65,6 +68,7 @@ public static class Escapers
             TemplateFormat.GradleKotlin => GradleKotlin(normalized),
             TemplateFormat.Json => Json(normalized),
             TemplateFormat.Yaml => Yaml(normalized),
+            TemplateFormat.Swift => Swift(normalized),
             TemplateFormat.None => normalized,
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
@@ -185,6 +189,36 @@ public static class Escapers
     /// quotes YAML's escaping rules are JSON's.
     /// </remarks>
     private static string Yaml(string value) => Json(value);
+
+    /// <summary>
+    /// Escapes a value for a Swift string literal.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The backslash is the one that matters, and not for the usual reason:
+    /// Swift's string interpolation is <c>\(…)</c>, so an unescaped backslash
+    /// before a parenthesis turns a customer's app name into an expression the
+    /// compiler tries to evaluate. Escaping backslashes covers it, because the
+    /// interpolation cannot start without one.
+    /// </remarks>
+    private static string Swift(string value)
+    {
+        var builder = new StringBuilder(value.Length + 8);
+
+        foreach (var ch in value)
+        {
+            switch (ch)
+            {
+                case '\\': builder.Append(@"\\"); break;
+                case '"': builder.Append("\\\""); break;
+                case '\n': builder.Append(@"\n"); break;
+                case '\r': builder.Append(@"\r"); break;
+                case '\t': builder.Append(@"\t"); break;
+                default: builder.Append(ch); break;
+            }
+        }
+
+        return builder.ToString();
+    }
 
     /// <summary>Escapes a value for a JSON string, without the quotes.</summary>
     /// <remarks>

@@ -47,6 +47,9 @@ public sealed class AndroidProjectGenerator : ProjectGenerator
             (".properties", TemplateFormat.None),
         ];
 
+    /// <inheritdoc/>
+    protected override ImmutableArray<string> ExcludedFromGenerated => ["app/src/test/"];
+
     /// <summary>
     /// The placeholder vector a generated icon makes redundant.
     /// </summary>

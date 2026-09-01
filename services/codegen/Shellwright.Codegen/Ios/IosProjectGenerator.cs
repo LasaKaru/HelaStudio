@@ -32,13 +32,18 @@ public sealed class IosProjectGenerator : ProjectGenerator
     /// <param name="templates">The shell to render.</param>
     /// <param name="assets">Where <c>asset://</c> references are resolved.</param>
     /// <param name="images">The icon-resizing pipeline.</param>
+    /// <param name="includeTests">
+    /// Whether to keep the shell's own test target. True only when rendering
+    /// the shell back over itself; a customer's project never gets it.
+    /// </param>
     public IosProjectGenerator(
         TemplateSource templates,
         IAssetStore assets,
-        IImagePipeline? images = null)
-        : base(templates, assets, images)
-    {
-    }
+        IImagePipeline? images = null,
+        bool includeTests = false)
+        : base(templates, assets, images) => this.includeTests = includeTests;
+
+    private readonly bool includeTests;
 
     /// <inheritdoc/>
     protected override string Platform => "ios";
@@ -50,6 +55,7 @@ public sealed class IosProjectGenerator : ProjectGenerator
     protected override ImmutableArray<(string Suffix, TemplateFormat Format)> FormatsByPath =>
         [
             (".yml", TemplateFormat.Yaml),
+            (".swift", TemplateFormat.Swift),
             (".plist", TemplateFormat.Xml),
             (".entitlements", TemplateFormat.Xml),
             (".xcprivacy", TemplateFormat.Xml),
@@ -57,6 +63,10 @@ public sealed class IosProjectGenerator : ProjectGenerator
             (".sh", TemplateFormat.None),
             (".md", TemplateFormat.None),
         ];
+
+    /// <inheritdoc/>
+    protected override ImmutableArray<string> ExcludedFromGenerated =>
+        includeTests ? [] : ["Tests/"];
 
     /// <inheritdoc/>
     protected override ImmutableArray<GeneratedFile> PlatformFiles(JsonObject resolved) =>
@@ -74,6 +84,12 @@ public sealed class IosProjectGenerator : ProjectGenerator
             ["customScheme"] = resolved["deepLinks"]?["customScheme"]?.GetValue<string>() ?? string.Empty,
             ["hasGeneratedIcon"] = IosAssetCatalogue.IconReference(resolved) is not null,
             ["projectName"] = ProjectName(resolved),
+
+            // ⚠️ False for a generated project, and it has to be: dropping
+            // Tests/ without also dropping the target leaves SwiftPM pointing at
+            // a directory that does not exist, and `swift build` fails before it
+            // compiles a line. The shell keeps both.
+            ["includeTests"] = includeTests,
         };
 
     /// <summary>
