@@ -14,6 +14,23 @@
 
   <ItemGroup Label="Codegen">
     <PackageVersion Include="Scriban" Version="7.2.6" />
+    <!-- Image resizing for the icon pipeline.
+
+         ⚠️ SkiaSharp rather than ImageSharp, and the reason is licensing, not
+         capability. ImageSharp is under the Six Labors Split License: free
+         under Apache-2.0 terms only while the consumer is under 1M USD annual
+         gross revenue, and version 4 enforces this with a build-time licence
+         key — a Release build simply fails without one. Adopting it would
+         commit Shellwright to a future payment and a future build blocker, on
+         the critical path of every customer build.
+
+         SkiaSharp is MIT over Google's BSD-licensed Skia: no revenue trigger,
+         no key, no expiry. The cost is native binaries per runtime identifier,
+         which is a deployment detail we control on hosts we own.
+
+         See docs/adr/0007-image-pipeline.md. -->
+    <PackageVersion Include="SkiaSharp" Version="3.119.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

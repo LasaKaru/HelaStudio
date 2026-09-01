@@ -104,6 +104,22 @@ android {
             "GradleDependency",
             "AndroidGradlePluginVersion",
             "NewerVersionAvailable",
+            // ⚠️ Two checks about the *customer's artwork*, not about anything
+            // the generator can fix, and both fail the build outright because
+            // lint runs warnings-as-errors here.
+            //
+            // IconLauncherShape objects to a launcher icon that fills its whole
+            // square. MonochromeLauncherIcon wants a themed-icon layer, which
+            // needs artwork with meaningful transparency — and the schema asks
+            // for a source with none, because Apple rejects an app icon that
+            // has any.
+            //
+            // Neither is something a customer can act on from a failed build
+            // log, and neither should stop them shipping. The place to raise
+            // them is the studio, at upload, where the artwork is in front of
+            // the person who can change it.
+            "IconLauncherShape",
+            "MonochromeLauncherIcon",
         )
     }
 }

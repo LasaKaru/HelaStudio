@@ -19,8 +19,15 @@ internal static class Fixtures
     /// <summary>Directory holding approved generated-project snapshots.</summary>
     internal static string GoldenDir => Path.Combine(RepoRoot, "tests", "fixtures", "generated");
 
+    /// <summary>Directory holding content-addressed fixture assets.</summary>
+    internal static string AssetDir => Path.Combine(RepoRoot, "tests", "fixtures", "assets");
+
+    /// <summary>A store over the fixture assets.</summary>
+    internal static Codegen.Assets.IAssetStore Assets() => new Codegen.Assets.DirectoryAssetStore(AssetDir);
+
     /// <summary>A generator reading the in-tree Android shell.</summary>
-    internal static Android.AndroidProjectGenerator Generator() => new(new TemplateSource(AndroidShell));
+    internal static Android.AndroidProjectGenerator Generator() =>
+        new(new TemplateSource(AndroidShell), Assets());
 
     /// <summary>Reads a fixture config and resolves its schema defaults.</summary>
     /// <param name="name">The fixture file name.</param>

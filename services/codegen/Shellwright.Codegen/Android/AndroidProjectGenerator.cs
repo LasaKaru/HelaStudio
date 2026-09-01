@@ -56,6 +56,18 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
     /// generator's very first run, which is the argument for having made a
     /// duplicate path an error rather than a silent overwrite.
     /// </remarks>
+    /// <summary>
+    /// Shell files that a generated icon makes redundant.
+    /// </summary>
+    /// <remarks>
+    /// The placeholder vector exists so the shell builds standalone. Once the
+    /// config supplies a real icon it is unreferenced, and lint fails the
+    /// customer's build over the unused resource — so it is dropped rather than
+    /// shipped as dead weight.
+    /// </remarks>
+    private static readonly ImmutableArray<string> ReplacedByGeneratedIcon =
+        ["app/src/main/res/drawable/ic_launcher_foreground.xml"];
+
     private static readonly ImmutableArray<string> AlwaysGenerated =
         [
             "app/src/main/assets/appconfig.json",
@@ -63,13 +75,24 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
         ];
 
     private readonly TemplateSource templates;
+    private readonly Assets.IAssetStore assets;
+    private readonly Assets.IImagePipeline images;
 
     /// <summary>Creates a generator reading from a shell template tree.</summary>
     /// <param name="templates">The shell to render.</param>
-    public AndroidProjectGenerator(TemplateSource templates)
+    /// <param name="assets">Where <c>asset://</c> references are resolved.</param>
+    /// <param name="images">The icon-resizing pipeline.</param>
+    public AndroidProjectGenerator(
+        TemplateSource templates,
+        Assets.IAssetStore assets,
+        Assets.IImagePipeline? images = null)
     {
         ArgumentNullException.ThrowIfNull(templates);
+        ArgumentNullException.ThrowIfNull(assets);
+
         this.templates = templates;
+        this.assets = assets;
+        this.images = images ?? new Assets.SkiaImagePipeline();
     }
 
     /// <inheritdoc/>
@@ -84,6 +107,7 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
         ArgumentNullException.ThrowIfNull(sink);
 
         var hashes = ConfigHasher.Compute(resolved, toolchain.ToHashContext());
+        var hasIcon = AndroidIcons.IconReference(resolved) is not null;
         var written = new List<GeneratedFile>();
 
         foreach (var template in templates.Read())
@@ -91,6 +115,11 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
             cancellationToken.ThrowIfCancellationRequested();
 
             if (AlwaysGenerated.Contains(template.OutputPath))
+            {
+                continue;
+            }
+
+            if (hasIcon && ReplacedByGeneratedIcon.Contains(template.OutputPath))
             {
                 continue;
             }
@@ -111,6 +140,12 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
 
         written.Add(ConfigAsset(resolved));
         written.Add(Manifest(resolved, toolchain, hashes));
+
+        // A config with no icon keeps the shell's placeholder, so the generated
+        // project still builds and still looks like something. A config that
+        // *does* name one and cannot resolve it fails loudly: shipping a
+        // customer's app under a placeholder icon is worse than not shipping.
+        written.AddRange(AndroidIcons.Render(resolved, assets, images));
 
         // Sorted once, here, so the tree manifest and the sink agree and
         // neither depends on the order the rules happened to run in.
@@ -147,6 +182,12 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
                 ["removedPermissions"] = RemovedPermissions(resolved),
                 ["projectSlug"] = ProjectSlug(resolved),
                 ["customScheme"] = resolved["deepLinks"]?["customScheme"]?.GetValue<string>() ?? string.Empty,
+
+                // Whether the launcher icon was generated from the config or is
+                // still the shell's placeholder. The adaptive-icon XML has to
+                // point at whichever exists, or a customer's app ships showing
+                // the placeholder on every Android 8 and later device.
+                ["hasGeneratedIcon"] = AndroidIcons.IconReference(resolved) is not null,
                 ["screenOrientation"] = ScreenOrientation(resolved),
             });
 
@@ -242,6 +283,7 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
     /// </remarks>
     private static readonly ImmutableArray<string> OptionalPermissions =
         [
+            "android.permission.ACCESS_COARSE_LOCATION",
             "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.CAMERA",
             "android.permission.POST_NOTIFICATIONS",
@@ -346,6 +388,13 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
 
         if (permissions?["location"]?.GetValue<string>() is "whenInUse" or "always")
         {
+            // ⚠️ Both, always. Since Android 12 a request for FINE without
+            // COARSE is rejected at the permission dialog: the user is offered
+            // an "approximate location" choice that the app has not declared,
+            // so the grant silently fails. Lint calls this out
+            // (CoarseFineLocation) but the runtime consequence is worse than a
+            // lint error — location simply never works for that customer.
+            granted.Add("android.permission.ACCESS_COARSE_LOCATION");
             granted.Add("android.permission.ACCESS_FINE_LOCATION");
         }
 

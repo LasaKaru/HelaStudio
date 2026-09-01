@@ -50,7 +50,7 @@ static async Task RegenerateShellAsync(string repoRoot)
         System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(configPath).ConfigureAwait(false))!);
 
     var sink = new InMemoryFileSink();
-    await new AndroidProjectGenerator(new TemplateSource(shell))
+    await new AndroidProjectGenerator(new TemplateSource(shell), GoldenCorpus.AssetStore(repoRoot))
         .GenerateAsync(resolved, ToolchainDescriptor.Android, sink)
         .ConfigureAwait(false);
 

@@ -80,11 +80,19 @@ public static class GoldenCorpus
 
         var sink = new InMemoryFileSink();
         var generator = new AndroidProjectGenerator(
-            new TemplateSource(Path.Combine(repoRoot, "shells", "android")));
+            new TemplateSource(Path.Combine(repoRoot, "shells", "android")),
+            AssetStore(repoRoot));
 
         await generator.GenerateAsync(resolved, ToolchainDescriptor.Android, sink).ConfigureAwait(false);
         return sink;
     }
+
+    /// <summary>The fixture asset store, holding the icons fixtures reference.</summary>
+    /// <param name="repoRoot">The repository root.</param>
+    /// <returns>A store over <c>tests/fixtures/assets</c>.</returns>
+    public static Shellwright.Codegen.Assets.IAssetStore AssetStore(string repoRoot) =>
+        new Shellwright.Codegen.Assets.DirectoryAssetStore(
+            Path.Combine(repoRoot, "tests", "fixtures", "assets"));
 
     /// <summary>Resolves schema defaults, refusing an invalid config.</summary>
     /// <param name="config">The raw configuration.</param>

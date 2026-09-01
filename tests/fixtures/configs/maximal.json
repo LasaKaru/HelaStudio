@@ -10,7 +10,7 @@
     "allowedOrigins": ["https://app.acme.com", "https://acme.com", "https://help.acme.com"]
   },
   "branding": {
-    "icon": "asset://sha256-1111111111111111111111111111111111111111111111111111111111111111",
+    "icon": "asset://sha256-ca33913ba4112e9bb80714d79a3c2ece22510c1bbcdefb0030da9e56b59bc2c8",
     "splash": {
       "backgroundColor": "#0B1220",
       "logo": "asset://sha256-2222222222222222222222222222222222222222222222222222222222222222",
@@ -19,7 +19,12 @@
         "logo": "asset://sha256-3333333333333333333333333333333333333333333333333333333333333333"
       }
     },
-    "theme": { "primary": "#2563EB", "navBar": "#FFFFFF", "tabBar": "#FFFFFF", "statusBar": "dark-content" },
+    "theme": {
+      "primary": "#2563EB",
+      "navBar": "#FFFFFF",
+      "tabBar": "#FFFFFF",
+      "statusBar": "dark-content"
+    },
     "darkMode": "system"
   },
   "navigation": {
@@ -27,38 +32,112 @@
       "enabled": true,
       "titleSource": "documentTitle",
       "actions": [
-        { "id": "share", "type": "share", "label": "Share this page" },
-        { "id": "refresh", "type": "refresh", "label": "Reload" },
-        { "id": "help", "type": "custom", "label": "Help", "icon": "life-buoy" }
+        {
+          "id": "share",
+          "type": "share",
+          "label": "Share this page"
+        },
+        {
+          "id": "refresh",
+          "type": "refresh",
+          "label": "Reload"
+        },
+        {
+          "id": "help",
+          "type": "custom",
+          "label": "Help",
+          "icon": "life-buoy"
+        }
       ]
     },
     "tabBar": {
       "enabled": true,
       "items": [
-        { "id": "home", "label": "Home", "icon": "home", "url": "/", "activePattern": "^/$" },
-        { "id": "orders", "label": "Orders", "icon": "package", "url": "/orders", "activePattern": "^/orders" },
-        { "id": "scan", "label": "Scan", "icon": "scan-line", "url": "/scan", "activePattern": "^/scan" },
-        { "id": "account", "label": "Account", "icon": "user", "url": "/account", "activePattern": "^/account" }
+        {
+          "id": "home",
+          "label": "Home",
+          "icon": "home",
+          "url": "/",
+          "activePattern": "^/$"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "icon": "package",
+          "url": "/orders",
+          "activePattern": "^/orders"
+        },
+        {
+          "id": "scan",
+          "label": "Scan",
+          "icon": "scan-line",
+          "url": "/scan",
+          "activePattern": "^/scan"
+        },
+        {
+          "id": "account",
+          "label": "Account",
+          "icon": "user",
+          "url": "/account",
+          "activePattern": "^/account"
+        }
       ]
     },
     "drawer": {
       "enabled": true,
       "items": [
-        { "id": "settings", "label": "Settings", "icon": "settings", "url": "/settings", "section": "You" },
-        { "id": "support", "label": "Support", "icon": "life-buoy", "url": "https://help.acme.com", "section": "Help" },
-        { "id": "about", "label": "About", "icon": "info", "url": "/about", "section": "Help" }
+        {
+          "id": "settings",
+          "label": "Settings",
+          "icon": "settings",
+          "url": "/settings",
+          "section": "You"
+        },
+        {
+          "id": "support",
+          "label": "Support",
+          "icon": "life-buoy",
+          "url": "https://help.acme.com",
+          "section": "Help"
+        },
+        {
+          "id": "about",
+          "label": "About",
+          "icon": "info",
+          "url": "/about",
+          "section": "Help"
+        }
       ]
     }
   },
   "linkRules": [
-    { "id": "app", "pattern": "^https://app\\.acme\\.com", "action": "internal" },
-    { "id": "help", "pattern": "^https://help\\.acme\\.com", "action": "readerModal" },
-    { "id": "blocked", "pattern": "^https://ads\\.example\\.com", "action": "block" },
-    { "id": "fallback", "pattern": ".*", "action": "externalBrowser" }
+    {
+      "id": "app",
+      "pattern": "^https://app\\.acme\\.com",
+      "action": "internal"
+    },
+    {
+      "id": "help",
+      "pattern": "^https://help\\.acme\\.com",
+      "action": "readerModal"
+    },
+    {
+      "id": "blocked",
+      "pattern": "^https://ads\\.example\\.com",
+      "action": "block"
+    },
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
   ],
   "webOverrides": {
     "userAgentSuffix": "AcmeApp/1.4.0",
-    "headers": { "X-Client": "mobile-app", "X-Client-Version": "1.4.0" },
+    "headers": {
+      "X-Client": "mobile-app",
+      "X-Client-Version": "1.4.0"
+    },
     "injectCss": "asset://sha256-4444444444444444444444444444444444444444444444444444444444444444",
     "injectJs": "asset://sha256-5555555555555555555555555555555555555555555555555555555555555555",
     "persistCookies": true,
@@ -75,19 +154,54 @@
       "id": "welcome",
       "type": "onboarding",
       "showOnce": true,
-      "config": { "slides": [{ "title": "Welcome to Acme" }] }
+      "config": {
+        "slides": [
+          {
+            "title": "Welcome to Acme"
+          }
+        ]
+      }
     },
-    { "id": "prefs", "type": "settings", "showOnce": false, "config": { "sections": [{ "title": "Notifications" }] } }
+    {
+      "id": "prefs",
+      "type": "settings",
+      "showOnce": false,
+      "config": {
+        "sections": [
+          {
+            "title": "Notifications"
+          }
+        ]
+      }
+    }
   ],
   "plugins": {
-    "push": { "provider": "shellwright", "promptOnLaunch": false },
-    "biometric": { "promptReason": "Unlock Acme" },
-    "qr-scanner": { "formats": ["qr", "ean13"], "beepOnScan": true, "torchButton": true },
+    "push": {
+      "provider": "shellwright",
+      "promptOnLaunch": false
+    },
+    "biometric": {
+      "promptReason": "Unlock Acme"
+    },
+    "qr-scanner": {
+      "formats": ["qr", "ean13"],
+      "beepOnScan": true,
+      "torchButton": true
+    },
     "haptics": {},
-    "iap": { "productsUrl": "https://app.acme.com/iap-products.json" }
+    "iap": {
+      "productsUrl": "https://app.acme.com/iap-products.json"
+    }
   },
-  "ota": { "enabled": true, "channel": "production", "rolloutPercent": 100 },
-  "deepLinks": { "universalLinks": ["app.acme.com", "acme.com"], "customScheme": "acme" },
+  "ota": {
+    "enabled": true,
+    "channel": "production",
+    "rolloutPercent": 100
+  },
+  "deepLinks": {
+    "universalLinks": ["app.acme.com", "acme.com"],
+    "customScheme": "acme"
+  },
   "permissions": {
     "camera": true,
     "microphone": false,
@@ -99,10 +213,17 @@
     "biometric": true
   },
   "build": {
-    "android": { "minSdk": 24, "targetSdk": 36 },
-    "ios": { "minVersion": "15.0" },
+    "android": {
+      "minSdk": 24,
+      "targetSdk": 36
+    },
+    "ios": {
+      "minVersion": "15.0"
+    },
     "orientation": "any",
     "maximumWindows": 3
   },
-  "x-acme": { "internalTicket": "ACME-1421" }
+  "x-acme": {
+    "internalTicket": "ACME-1421"
+  }
 }

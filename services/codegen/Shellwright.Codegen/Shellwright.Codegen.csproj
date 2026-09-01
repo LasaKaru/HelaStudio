@@ -11,6 +11,11 @@
 
   <ItemGroup>
     <PackageReference Include="Scriban" />
+    <PackageReference Include="SkiaSharp" />
+    <!-- The generator runs on Linux hosts and Linux build runners. macOS and
+         Windows identifiers would need their own native-asset packages; add
+         them when something actually runs there. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
   </ItemGroup>
 
   <ItemGroup>

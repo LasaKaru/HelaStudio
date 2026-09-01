@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
+{{~ if hasGeneratedIcon ~}}
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
     <!--
       ⚠️ No <monochrome> layer when the icon is generated from a photograph or
@@ -10,4 +11,8 @@
       back to when the layer is absent. A real monochrome layer needs artwork
       the customer has not given us.
     -->
+{{~ else ~}}
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+{{~ end ~}}
 </adaptive-icon>

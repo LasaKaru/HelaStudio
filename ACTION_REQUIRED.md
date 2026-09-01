@@ -190,7 +190,31 @@ separately; requiring `gate` alone would let a broken shell merge.
 Do not require the macOS job. It only runs on `workflow_dispatch`, so requiring
 it would block every pull request forever.
 
-### 12. Close Dependabot's open security PRs
+### 12. Confirm the image-library licensing decision
+
+**Nothing is blocked; this is a decision made on your behalf that you may want
+to overrule.**
+
+The icon pipeline needs an image library. The sprint plan recommended
+**ImageSharp**, and it has a real advantage — pure managed code, no native
+binaries to go missing on the arm64 Oracle host.
+
+⚠️ Its licence has a revenue trigger. The Six Labors Split License is
+Apache-2.0 only while the consumer is open source, a non-profit, or a for-profit
+under **1M USD annual gross revenue**. Above that it needs a paid commercial
+licence. Version 4 also enforces this at build time — a Release build fails
+outright without a key.
+
+I chose **SkiaSharp** instead: MIT over Google's BSD-licensed Skia, no revenue
+trigger, no key. The cost is native binaries per platform, which is a deployment
+detail on hosts you control. Reasoning in
+[ADR 0007](docs/adr/0007-image-pipeline.md).
+
+If you would rather pay Six Labors later in exchange for a simpler deployment
+today, say so — it is one class behind `IImagePipeline` and a golden-file
+approval.
+
+### 13. Close Dependabot's open security PRs
 
 Dependabot keeps re-reporting advisories that are already fixed directly in the
 branch, which shows as failing checks on the pull request. They are not from our
