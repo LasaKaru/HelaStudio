@@ -98,7 +98,15 @@ public sealed class AndroidProjectGenerator : IProjectGenerator
             written.Add(
                 template.IsTemplate
                     ? Render(template, resolved, toolchain)
-                    : new GeneratedFile(template.OutputPath, template.Content, template.Mode));
+                    : new GeneratedFile(
+                        template.OutputPath,
+
+                        // Copied files need the same line-ending guarantee as
+                        // rendered ones, or the output encodes whichever
+                        // checkout settings the generator happened to run
+                        // under. See TextNormaliser.NormaliseCopiedFile.
+                        [.. TextNormaliser.NormaliseCopiedFile(template.Content.AsSpan().ToArray())],
+                        template.Mode));
         }
 
         written.Add(ConfigAsset(resolved));

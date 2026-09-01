@@ -51,5 +51,5 @@
 0644     43764 ea369800ae4c88aa  gradle/wrapper/gradle-wrapper.jar
 0644       340 00f697645c866ec0  gradle/wrapper/gradle-wrapper.properties
 0755      8733 562bdce399c9f255  gradlew
-0644      2937 90a1e0c312a8bcad  gradlew.bat
+0644      2843 119a1e4a31e8387b  gradlew.bat
 0644       544 5dcfed03073112f3  settings.gradle.kts
