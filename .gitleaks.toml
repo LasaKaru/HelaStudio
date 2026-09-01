@@ -39,10 +39,23 @@ tags = ["android", "signing"]
 
 [allowlist]
 description = """
-The CFG_SECRET_IN_CONFIG rule detects credentials pasted into a configuration.
-Testing a credential detector requires strings shaped like credentials, so the
-files below carry deliberately fake test vectors — published example values such
+Two kinds of file trip the scanner without carrying a secret.
+
+The CFG_SECRET_IN_CONFIG rule detects credentials pasted into a configuration,
+and testing a credential detector requires strings shaped like credentials, so
+those files carry deliberately fake test vectors — published example values such
 as AKIAIOSFODNN7EXAMPLE, or obvious filler. None is or ever was live.
+
+The generation manifests in the golden corpus carry the three BLAKE3 cache keys
+from ADR 0004. A 64-character hex value under a field named "codeKey" is exactly
+what generic-api-key is built to find, and it is right to look — these simply
+are not secrets. They are digests of public fixture configs, reproducible by
+anyone with the repository, and they are named "key" because that is what the
+build cache calls them.
+
+⚠️ Only the manifest itself is allowed, not the tree around it. The generated
+appconfig.json beside it is still scanned, and so is every fixture config it was
+generated from — a real credential in a fixture would still be caught twice.
 
 Scoped to exact paths on purpose. A directory-wide or extension-wide exclusion
 here would be the hole the next real leak walks through.
@@ -55,4 +68,5 @@ paths = [
   '''^packages/config-schema/dotnet/Shellwright\.ConfigSchema/Rules/SecretRules\.cs$''',
   '''^docs/reference/diagnostics\.md$''',
   '''^\.gitleaks\.toml$''',
+  '''^tests/fixtures/generated/[^/]+/files/\.shellwright/manifest\.json$''',
 ]
