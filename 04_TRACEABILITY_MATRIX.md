@@ -403,12 +403,18 @@ Programme total: **1,134 tests** — 241 TypeScript (239 config-schema, 2 studio
 Temporal, for the same reason: what it checks is their behaviour. Each fixture
 starts what it needs when the corresponding connection string is absent.
 
-⚠️ **Do not run the API and orchestrator suites against one database at the same
-time.** Both fixtures `DROP SCHEMA public CASCADE` and re-migrate on start, so a
-concurrent run has the schema pulled out from under it and fails in ways that
-look like real defects — four of them, once, while this matrix was being
-written. Run them one after another, or point one at a second database with
-`SHELLWRIGHT_TEST_PG_*`.
+⚠️ **The two suites own separate databases**, and that is not a convention —
+it is load-bearing. Both fixtures `DROP SCHEMA public CASCADE` and re-migrate on
+start, and `dotnet test` runs test projects in parallel, so sharing one database
+means whichever starts second pulls the schema out from under the first. That
+failed CI once, and the errors it produced ("relation `__migrations` does not
+exist", policy violations on rows that should have existed) read like real
+defects in the code under test rather than like two suites fighting.
+
+The API suite uses `shellwright_test`; the orchestrator suite uses
+`shellwright_orchestrator_test` and deliberately ignores the `SHELLWRIGHT_TEST_PG_*`
+variables, which in CI name the API's database. Override it alone with
+`SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER` and `..._MIGRATOR`.
 
 ⚠️ The API suite needs a real PostgreSQL and will not run without one. The
 fixture starts a cluster itself when no connection strings are in the

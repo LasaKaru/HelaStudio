@@ -21,6 +21,14 @@ namespace Shellwright.Orchestrator.Tests.Infrastructure;
 /// tooling, rather than by a copy of the DDL kept here — a copy would drift,
 /// and the first symptom would be tests passing against a schema production
 /// does not have.
+///
+/// ⚠️ Its own database, not the API suite's. Both fixtures drop the schema and
+/// re-migrate when they start, and `dotnet test` runs test projects in
+/// parallel — so sharing one database means whichever starts second pulls the
+/// schema out from under the first. That failed CI once, with errors
+/// ("relation __migrations does not exist", policy violations on rows that
+/// should have existed) that read like real defects in the code under test
+/// rather than like two suites fighting over a database.
 /// </remarks>
 public sealed class BuildDatabaseFixture : IAsyncLifetime
 {
@@ -61,17 +69,36 @@ public sealed class BuildDatabaseFixture : IAsyncLifetime
         return connection;
     }
 
+    /// <summary>
+    /// The database this suite owns.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deliberately not <c>shellwright_test</c>, which the API suite drops
+    /// and re-migrates.
+    /// </remarks>
+    private const string DatabaseName = "shellwright_orchestrator_test";
+
     private static (string Runner, string Migrator) Resolve()
     {
-        var runner = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_RUNNER");
-        var migrator = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_MIGRATOR");
+        // ⚠️ The environment variables the API suite uses are ignored here, on
+        // purpose. In CI they name the API's database, and honouring them would
+        // put both suites back on one database — which is the failure this
+        // class exists to avoid. An explicit override for this suite alone is
+        // still available.
+        var runner = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER");
+        var migrator = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_ORCHESTRATOR_PG_MIGRATOR");
 
         if (!string.IsNullOrWhiteSpace(runner) && !string.IsNullOrWhiteSpace(migrator))
         {
             return (runner, migrator);
         }
 
-        foreach (var line in Run("bash", "scripts/dev-postgres.sh")
+        // ⚠️ A different database from the API suite's, passed to the same
+        // script. See the note on this class.
+        foreach (var line in Run(
+                     "bash",
+                     "scripts/dev-postgres.sh",
+                     ("SHELLWRIGHT_PG_DATABASE", DatabaseName))
                      .Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             var trimmed = line.Trim();
@@ -106,7 +133,8 @@ public sealed class BuildDatabaseFixture : IAsyncLifetime
         {
             throw new InvalidOperationException(
                 "No test database. scripts/dev-postgres.sh reported no connection strings — install "
-                + "PostgreSQL, or set SHELLWRIGHT_TEST_PG_RUNNER and SHELLWRIGHT_TEST_PG_MIGRATOR.");
+                + "PostgreSQL, or set SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER and "
+                + "SHELLWRIGHT_TEST_ORCHESTRATOR_PG_MIGRATOR.");
         }
 
         return (runner, migrator);
