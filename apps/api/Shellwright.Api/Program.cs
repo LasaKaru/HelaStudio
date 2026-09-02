@@ -1,11 +1,24 @@
+using System.Text.Json.Serialization;
 using Shellwright.Api.Auth;
+using Shellwright.Api.Authorization;
 using Shellwright.Api.Data;
 using Shellwright.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ⚠️ Enums cross the wire as their names, in both directions.
+//
+// Serialising a role as 3 would make the API unreadable and would tie every
+// client to the numeric order — which is load-bearing internally precisely
+// because it can be renumbered. Accepting them as names matters just as much:
+// without this converter the API happily *emits* "Owner" and rejects it on the
+// way back in with a 400 that says nothing useful.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddShellwrightData(builder.Configuration);
 builder.Services.AddShellwrightAuth(builder.Configuration);
+builder.Services.AddShellwrightAuthorization();
 
 // ⚠️ Deny by default. Without this, an endpoint that nobody remembered to
 // decorate is anonymous, and the mistake is invisible in review because the
@@ -36,6 +49,8 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
     .ExcludeFromDescription();
 
 app.MapAuthEndpoints();
+app.MapOrgEndpoints();
+app.MapApiTokenEndpoints();
 
 app.Run();
 
