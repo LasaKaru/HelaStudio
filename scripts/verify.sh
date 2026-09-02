@@ -82,6 +82,13 @@ step "Tests"
 check "node suites" pnpm test
 
 if have dotnet ".NET — dotnet not on PATH"; then
+	# The control plane's tests need a real PostgreSQL. The fixture starts one
+	# itself if it has to, but doing it here means a missing server is reported
+	# as "no database" rather than as a wall of failed security tests.
+	if have psql "control plane tests — psql not installed, so no test database"; then
+		check "test database" sh -c 'bash scripts/dev-postgres.sh >/dev/null'
+	fi
+
 	check "dotnet format" dotnet format --verify-no-changes
 	# Release, not Debug: analyser rules and package licence gates only bite here.
 	check "dotnet build"  dotnet build -c Release

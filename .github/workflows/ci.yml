@@ -38,6 +38,7 @@ jobs:
             dotnet:
               - '**/*.cs'
               - '**/*.csproj'
+              - '**/*.sql'
               - 'Directory.*.props'
               - '.globalconfig'
               - 'Shellwright.slnx'
@@ -135,6 +136,28 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.dotnet == 'true' || needs.changes.outputs.schema == 'true'
+
+    # The control plane's tenant isolation is a PostgreSQL guarantee — policies,
+    # role ownership, and grants — so its tests need a real server. There is no
+    # in-memory provider that could disagree with them in a useful way.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # scripts/dev-postgres.sh creates the two roles and the database against
+      # this, instead of starting a cluster of its own.
+      SHELLWRIGHT_PG_ADMIN: Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=postgres
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

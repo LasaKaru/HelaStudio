@@ -1,0 +1,30 @@
+# Migrations are written by `dotnet ef migrations add`, not by hand.
+#
+# The repository builds with TreatWarningsAsErrors and AnalysisLevel=latest-all,
+# and the EF scaffolder emits code that trips several style and quality rules.
+# There are three ways to deal with that and only one of them is honest:
+#
+#   1. Hand-edit each generated file to satisfy the analyzers. The next
+#      `migrations add` regenerates it and the edits are lost, so the build
+#      breaks on a schedule set by whoever changes the model next.
+#   2. Turn the rules down repository-wide. That silences them in the code we
+#      actually write, which is where they earn their keep.
+#   3. Scope the exemption to the directory that contains generated code only.
+#
+# This file is option 3, scoped to the one directory EF's tooling requires
+# migrations to live in. A few migrations here *are* hand-written — anything
+# involving policies, grants, or roles has to be — and those keep their SQL in
+# ../Sql/*.sql so that the security-critical text is reviewed as SQL rather
+# than as a C# string literal. What is left in the .cs file is two lines.
+
+[*.cs]
+# The scaffolder emits block-scoped namespaces.
+dotnet_diagnostic.IDE0161.severity = none
+# Up/Down are called by EF with a non-null builder; a null check adds nothing.
+dotnet_diagnostic.CA1062.severity = none
+# Column-name arrays passed inline to CreateIndex.
+dotnet_diagnostic.CA1861.severity = none
+# The scaffolder's `new[] { ... }` initialisers.
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0028.severity = none
