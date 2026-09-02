@@ -8,6 +8,7 @@ using Shellwright.Orchestrator.Activities;
 using Shellwright.Orchestrator.Artifacts;
 using Shellwright.Orchestrator.Logs;
 using Shellwright.Orchestrator.Patching;
+using Shellwright.Orchestrator.Persistence;
 using Shellwright.Orchestrator.Runner;
 using Shellwright.Orchestrator.Verification;
 using Shellwright.Orchestrator.Workflows;
@@ -113,7 +114,15 @@ public static class OrchestratorHostExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<BuildStoreOptions>()
+            .Bind(configuration.GetSection(BuildStoreOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.TryAddSingleton(TimeProvider.System);
+
+        services.AddSingleton<IBuildStore, PostgresBuildStore>();
+        services.AddSingleton<IArtifactCache, PostgresArtifactCache>();
 
         services.AddSingleton<IRunnerPool, LocalRunnerPool>();
         services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();

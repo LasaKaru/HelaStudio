@@ -331,6 +331,28 @@ Set `ArtifactStorage__Directory` somewhere with room, and decide a retention
 policy. There is no expiry today: artifacts accumulate until the disk fills,
 and the first symptom is builds failing for an unrelated-looking reason.
 
+### 21. Create the `shellwright_runner` database role in every environment
+
+The build orchestrator connects as its own PostgreSQL role, not as the API's and
+not as the schema owner. `scripts/dev-postgres.sh` creates it locally; a
+deployed database needs it created before migrations run, and the `RunnerRole`
+migration fails with an explicit message if it is missing rather than quietly
+skipping the grants.
+
+```sql
+CREATE ROLE shellwright_runner LOGIN PASSWORD '...' NOBYPASSRLS NOINHERIT;
+```
+
+Then set `BuildStore__ConnectionString` for the orchestrator to use it.
+
+⚠️ **Do not substitute the migrator role or a superuser to get past a
+connection error.** Either one is exempt from every policy in the database, so
+the orchestrator would silently gain read access to every user, organisation,
+API token hash and refresh token — with no error, no log line, and every test
+still green. The whole of `Data/Sql/RunnerRole.up.sql` exists to make the
+orchestrator's reach a short list rather than "everything", and connecting as
+the wrong role discards it in one line of configuration.
+
 ---
 
 ## Running cost

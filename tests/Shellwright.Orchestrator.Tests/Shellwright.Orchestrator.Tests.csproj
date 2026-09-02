@@ -19,12 +19,16 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Temporalio.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../services/orchestrator/Shellwright.Orchestrator/Shellwright.Orchestrator.csproj" />
+    <!-- ⚠️ Referenced only so BuildContractTests can compare the two enum sets. The
+         services do not reference each other at run time, and must not start. -->
+    <ProjectReference Include="../../apps/api/Shellwright.Api/Shellwright.Api.csproj" />
   </ItemGroup>
 
 </Project>

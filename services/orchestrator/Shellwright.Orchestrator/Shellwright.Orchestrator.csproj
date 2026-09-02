@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Temporalio" />
     <PackageReference Include="Temporalio.Extensions.Hosting" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />

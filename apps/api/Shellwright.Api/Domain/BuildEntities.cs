@@ -31,38 +31,40 @@ public enum BuildType
 
 /// <summary>Where a build has got to.</summary>
 /// <remarks>
-/// ⚠️ Stored as the integer, and the values are permanent. A build row outlives
-/// several deployments, and renumbering these would silently reinterpret every
-/// historical row — including the ones a customer is billed against.
+/// ⚠️ These values must stay identical to the orchestrator's
+/// <c>BuildState</c>, name for name and number for number. The orchestrator
+/// writes the integer straight into this column, so a divergence does not fail
+/// — it silently reinterprets. <c>BuildContractTests</c> holds the two equal,
+/// and exists because the first version of this enum invented two extra states
+/// and renumbered the terminal ones, which would have left every successful
+/// build with no finish time and marked every cancelled one as succeeded.
+///
+/// The numbers are permanent for a second reason: a build row outlives several
+/// deployments, and renumbering would reinterpret every historical row,
+/// including the ones a customer is billed against.
 /// </remarks>
 public enum BuildState
 {
     /// <summary>Accepted, waiting for a runner.</summary>
     Queued = 0,
 
-    /// <summary>Server-side validation is running.</summary>
-    Validating = 1,
+    /// <summary>The generator is producing a project.</summary>
+    Generating = 1,
 
-    /// <summary>The project is being generated.</summary>
-    Generating = 2,
+    /// <summary>The toolchain is compiling it, or a cached artifact is being patched.</summary>
+    Building = 2,
 
-    /// <summary>The toolchain is running, or the cached artifact is being patched.</summary>
-    Building = 3,
-
-    /// <summary>The artifact is being checked.</summary>
-    Verifying = 4,
-
-    /// <summary>The artifact is being stored.</summary>
-    Uploading = 5,
+    /// <summary>Signature, manifest, size, and permissions are being checked.</summary>
+    Verifying = 3,
 
     /// <summary>Finished, with an artifact.</summary>
-    Succeeded = 6,
+    Succeeded = 4,
 
     /// <summary>Finished, without one.</summary>
-    Failed = 7,
+    Failed = 5,
 
     /// <summary>Stopped on request.</summary>
-    Cancelled = 8,
+    Cancelled = 6,
 }
 
 /// <summary>How much of a previous build was reused.</summary>

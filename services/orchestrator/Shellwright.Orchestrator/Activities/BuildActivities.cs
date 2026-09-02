@@ -106,6 +106,7 @@ public sealed class BuildActivities(
         return await cache.LookupAsync(
             request.AppId,
             request.Platform,
+            request.Type,
             hashes,
             ActivityExecutionContext.Current.CancellationToken);
     }
@@ -324,7 +325,7 @@ public sealed class BuildActivities(
         var uploaded = await artifacts.StoreAsync(request, built.ArtifactPath, token);
 
         await store.RecordArtifactAsync(request.BuildId, uploaded, token);
-        await cache.StoreAsync(request.AppId, request.Platform, hashes, uploaded, token);
+        await cache.StoreAsync(request.AppId, request.Platform, request.Type, hashes, uploaded, token);
         await logs.ArchiveAsync(request.BuildId, token);
 
         return uploaded;

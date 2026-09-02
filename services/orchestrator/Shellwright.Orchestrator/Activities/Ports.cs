@@ -5,9 +5,17 @@ namespace Shellwright.Orchestrator.Activities;
 
 /// <summary>A configuration version, as the orchestrator needs it.</summary>
 /// <param name="AppId">Which app.</param>
-/// <param name="OrgId">Which tenant.</param>
 /// <param name="Body">The resolved document.</param>
-public sealed record StoredConfig(Guid AppId, Guid OrgId, JsonObject Body);
+/// <remarks>
+/// ⚠️ No organisation here, deliberately. Who is charged travels on the
+/// <see cref="BuildRequest"/>, set by the API when it created the build.
+/// Carrying it here instead would mean joining apps to workspaces, and the
+/// orchestrator's database role has no grant on workspaces — it has no business
+/// enumerating a customer's organisation structure in order to compile a
+/// project. An earlier version of this record did carry it, nothing ever read
+/// it, and every configuration load failed with "permission denied".
+/// </remarks>
+public sealed record StoredConfig(Guid AppId, JsonObject Body);
 
 /// <summary>Reads and writes the build record.</summary>
 /// <remarks>
@@ -62,18 +70,25 @@ public interface IArtifactCache
     /// <summary>Looks for a reusable artifact.</summary>
     /// <param name="appId">Scopes the lookup. ⚠️ Never shared across apps.</param>
     /// <param name="platform">Which platform's artifact.</param>
+    /// <param name="type">
+    /// Debug or release. ⚠️ Part of the key, not a filter applied afterwards: a
+    /// debug-signed artifact satisfying a release build would hand a customer an
+    /// unpublishable binary in answer to a request for a publishable one.
+    /// </param>
     /// <param name="hashes">The three cache keys.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>How much can be reused.</returns>
     Task<CacheLookup> LookupAsync(
         Guid appId,
         BuildPlatform platform,
+        BuildType type,
         BuildHashes hashes,
         CancellationToken cancellationToken = default);
 
     /// <summary>Records an artifact against its cache keys.</summary>
     /// <param name="appId">Which app.</param>
     /// <param name="platform">Which platform.</param>
+    /// <param name="type">Debug or release. Part of the key.</param>
     /// <param name="hashes">The three cache keys.</param>
     /// <param name="artifact">What was produced.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -81,6 +96,7 @@ public interface IArtifactCache
     Task StoreAsync(
         Guid appId,
         BuildPlatform platform,
+        BuildType type,
         BuildHashes hashes,
         UploadedArtifact artifact,
         CancellationToken cancellationToken = default);
