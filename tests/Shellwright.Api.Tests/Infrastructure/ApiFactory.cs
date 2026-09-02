@@ -27,6 +27,10 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
     /// <summary>Controllable clock, so expiry and backoff are testable without sleeping.</summary>
     public FakeTimeProvider Clock { get; } = new(DateTimeOffset.Parse("2026-01-01T00:00:00Z", null));
 
+    /// <summary>Where uploaded bytes land for this factory's lifetime.</summary>
+    public string AssetDirectory { get; } =
+        Path.Combine(Path.GetTempPath(), "shellwright-assets", Guid.NewGuid().ToString("N"));
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -40,6 +44,10 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
         builder.UseSetting("Auth:Audience", "shellwright-test");
         builder.UseSetting("Auth:StudioOrigin", "https://studio.test");
         builder.UseSetting("Email:From", "Shellwright <no-reply@test>");
+        builder.UseSetting("Build:ShellVersion", "1.0.0");
+        builder.UseSetting("Build:Toolchain:agp", "8.9");
+        builder.UseSetting("Build:Toolchain:xcode", "26.1");
+        builder.UseSetting("AssetStorage:Directory", AssetDirectory);
 
         builder.ConfigureServices(services =>
         {
@@ -49,6 +57,17 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Email);
         });
+    }
+
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (disposing && Directory.Exists(AssetDirectory))
+        {
+            Directory.Delete(AssetDirectory, recursive: true);
+        }
     }
 
     /// <summary>Creates a client that does not follow redirects, so they can be asserted on.</summary>

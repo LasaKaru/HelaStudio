@@ -46,6 +46,9 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
     /// <summary>Write-only security log.</summary>
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
 
+    /// <summary>Remembered outcomes of requests that carried an idempotency key.</summary>
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -229,6 +232,20 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
             // ⚠️ No foreign key to users. The log has to survive the account it
             // describes, and "this user was deleted" is itself an event worth
             // keeping the surrounding entries for.
+        });
+
+        modelBuilder.Entity<IdempotencyRecord>(entity =>
+        {
+            entity.ToTable("idempotency_keys");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Key).HasMaxLength(200);
+            entity.Property(x => x.Endpoint).HasMaxLength(200);
+            entity.Property(x => x.RequestHash).HasMaxLength(64);
+
+            // The natural key. Scoped per user so that one caller's key cannot
+            // collide with, or be guessed by, another's.
+            entity.HasIndex(x => new { x.UserId, x.Endpoint, x.Key }).IsUnique();
+            entity.HasIndex(x => x.ExpiresAt);
         });
 
         ApplySnakeCaseNames(modelBuilder);

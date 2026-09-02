@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Shellwright.Api.Auth;
 using Shellwright.Api.Authorization;
+using Shellwright.Api.Config;
 using Shellwright.Api.Data;
 using Shellwright.Api.Endpoints;
 
@@ -19,6 +20,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddShellwrightData(builder.Configuration);
 builder.Services.AddShellwrightAuth(builder.Configuration);
 builder.Services.AddShellwrightAuthorization();
+builder.Services.AddShellwrightConfig(builder.Configuration);
 
 // ⚠️ Deny by default. Without this, an endpoint that nobody remembered to
 // decorate is anonymous, and the mistake is invisible in review because the
@@ -51,6 +53,9 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
 app.MapAuthEndpoints();
 app.MapOrgEndpoints();
 app.MapApiTokenEndpoints();
+app.MapAppEndpoints();
+app.MapConfigEndpoints();
+app.MapAssetEndpoints();
 
 app.Run();
 

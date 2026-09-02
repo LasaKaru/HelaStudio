@@ -234,6 +234,17 @@ public sealed class Asset
     /// <summary>Pixel height.</summary>
     public int Height { get; set; }
 
+    /// <summary>
+    /// Whether the image carries an alpha channel.
+    /// </summary>
+    /// <remarks>
+    /// Recorded at upload rather than derived later because it is what
+    /// <c>CFG_ICON_ALPHA</c> checks, and Apple rejects an app icon with
+    /// transparency. Storing it means the rule is a dictionary lookup during
+    /// validation instead of a decode.
+    /// </remarks>
+    public bool HasAlpha { get; set; }
+
     /// <summary>Creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
