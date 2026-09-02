@@ -111,6 +111,23 @@ if have swift "iOS ShellCore — swift not on PATH"; then
 	check "swift" sh -c 'cd shells/ios && swift test --no-parallel'
 fi
 
+step "Generated API client"
+# The committed OpenAPI document and the client generated from it must match the
+# route table they came from. CI checks the same thing; catching it here saves a
+# round trip.
+if have dotnet "API client — dotnet not on PATH"; then
+	check "client is current" sh -c '
+		bash scripts/generate-api-client.sh >/dev/null 2>&1 &&
+		git diff --quiet -- packages/api-client/openapi packages/api-client/src/generated
+	'
+fi
+
+# ⚠️ Deliberately not run here. The load scripts publish the API, migrate a
+# separate database, and take three minutes; `pnpm verify` is meant to be the
+# thing you run before every push. Run `bash scripts/load-test.sh` when you have
+# touched a hot path, and record the result in docs/perf/.
+skipped+=("k6 load tests — run scripts/load-test.sh by hand")
+
 if [ ${#skipped[@]} -gt 0 ]; then
 	step "Not checked here"
 	for item in "${skipped[@]}"; do

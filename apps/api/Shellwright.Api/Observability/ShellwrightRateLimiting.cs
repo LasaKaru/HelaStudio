@@ -6,6 +6,36 @@ using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Observability;
 
+/// <summary>Rate limit settings.</summary>
+/// <remarks>
+/// ⚠️ Configurable rather than constant, and the reason is not flexibility for
+/// its own sake. A load test that runs into the limiter measures the limiter:
+/// the first run of tests/load/config-read.js failed 99.95% of its requests and
+/// reported a latency figure for the 0.05% that got through, which is worse
+/// than no figure at all. The performance baseline therefore raises these, and
+/// says so, rather than quietly reporting the limiter's numbers as the API's.
+///
+/// The defaults are the production values and are what every test other than
+/// the load scripts runs against.
+/// </remarks>
+public sealed class RateLimitOptions
+{
+    /// <summary>Configuration section these settings bind to.</summary>
+    public const string SectionName = "RateLimits";
+
+    /// <summary>Reads permitted per minute, per caller.</summary>
+    public int ReadPerMinute { get; set; } = 300;
+
+    /// <summary>Burst capacity for writes, per caller.</summary>
+    public int WriteBurst { get; set; } = 60;
+
+    /// <summary>Writes replenished per minute, per caller.</summary>
+    public int WritePerMinute { get; set; } = 30;
+
+    /// <summary>Authentication requests permitted per minute, per caller.</summary>
+    public int AuthPerMinute { get; set; } = 20;
+}
+
 /// <summary>Rate limit policy names.</summary>
 public static class RateLimitPolicies
 {
@@ -39,10 +69,17 @@ public static class ShellwrightRateLimiting
 {
     /// <summary>Adds the limiter and its policies.</summary>
     /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Application configuration.</param>
     /// <returns>The same collection, for chaining.</returns>
-    public static IServiceCollection AddShellwrightRateLimiting(this IServiceCollection services)
+    public static IServiceCollection AddShellwrightRateLimiting(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var limits = configuration.GetSection(RateLimitOptions.SectionName).Get<RateLimitOptions>()
+            ?? new RateLimitOptions();
 
         services.AddRateLimiter(options =>
         {
@@ -50,7 +87,7 @@ public static class ShellwrightRateLimiting
                 PartitionKey(context),
                 _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 300,
+                    PermitLimit = limits.ReadPerMinute,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
@@ -61,8 +98,8 @@ public static class ShellwrightRateLimiting
                 {
                     // Enough burst for a studio autosaving while somebody
                     // types, refilled at a rate no human sustains.
-                    TokenLimit = 60,
-                    TokensPerPeriod = 30,
+                    TokenLimit = limits.WriteBurst,
+                    TokensPerPeriod = limits.WritePerMinute,
                     ReplenishmentPeriod = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                     AutoReplenishment = true,
@@ -77,7 +114,7 @@ public static class ShellwrightRateLimiting
                     // guessing; this protects the host from somebody trying a
                     // thousand accounts once each, which the per-account
                     // counter cannot see.
-                    PermitLimit = 20,
+                    PermitLimit = limits.AuthPerMinute,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));

@@ -221,6 +221,79 @@ branch, which shows as failing checks on the pull request. They are not from our
 workflows and do not affect the `gate` check. Closing its open PRs from the
 Security tab settles it.
 
+### 14. Register OAuth applications with GitHub and Google
+
+The sign-in flow is written and wired; it has never completed a real
+authorisation code exchange, because that needs live credentials at both
+providers. Account linking is tested directly, so what is unproven is the
+redirect chain rather than the logic behind it.
+
+**GitHub:** Settings → Developer settings → OAuth Apps → New OAuth App.
+Callback `https://<api-host>/v1/auth/oauth/github/callback`.
+
+**Google:** Cloud Console → APIs & Services → Credentials → OAuth client ID
+(Web application). Same callback path with `google`.
+
+Then set, from a secret store and never in `appsettings.json`:
+
+```
+Auth__Providers__github__ClientId
+Auth__Providers__github__ClientSecret
+Auth__Providers__google__ClientId
+Auth__Providers__google__ClientSecret
+```
+
+A provider with no credentials is skipped rather than registered with empty
+ones, so `/v1/auth/oauth/github` returns 404 until this is done — deliberately,
+because the alternative is an endpoint that accepts a request and fails at the
+provider with an error nobody can act on.
+
+### 15. Create a Cloudflare R2 bucket for assets
+
+Uploaded icons currently go to a directory on the API host. That is fine for
+development and wrong for anything else: it does not survive a container
+restart, and it does not exist on the second instance.
+
+R2 has no egress charge and a 10 GB free tier, which is the reason it was chosen
+over S3. Create a bucket and an API token scoped to it, then set
+`AssetStorage__*`. The swap is one class — `FileSystemAssetBlobStore` behind
+`IAssetBlobStore` — and the interface is already the seam.
+
+### 16. Provide a signing key for access tokens
+
+`Auth__SigningKey` must be at least 32 bytes, from a secret store.
+
+```
+openssl rand -base64 32
+```
+
+⚠️ The application refuses to start without one rather than generating one. A
+generated key would silently invalidate every session on each restart and would
+differ between instances, which presents as users being randomly signed out and
+is very hard to diagnose.
+
+### 17. Decide whether per-instance rate limits are acceptable
+
+Rate limiting is in-process, so three instances mean three times the stated
+limit. That is fine for protecting a host from a runaway client and not fine for
+anything a customer is billed against.
+
+Two ways forward, and it is a product decision rather than a technical one:
+move the limiter to a shared store before the second instance exists, or write
+down that the published limits are per instance. Either is defensible; the
+current state — a limit that quietly means something else in production — is
+not.
+
+### 18. Get a Resend API key for transactional email
+
+Verification and password-reset links are generated and, without a key, written
+to the log with a warning rather than sent. That is deliberate and loud, because
+a production deployment silently posting reset links into a log file is the
+failure worth making impossible to miss.
+
+Resend's free tier is 3,000 messages a month. Set `Email__ApiKey` and
+`Email__From` on a domain verified with them.
+
 ---
 
 ## Running cost

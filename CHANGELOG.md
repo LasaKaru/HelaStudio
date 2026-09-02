@@ -153,6 +153,41 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   arrives executable.
 - 168 codegen tests. Programme total 739.
 
+#### Sprint 06 — control plane API
+
+- `apps/api`: a multi-tenant control plane over PostgreSQL, with tenant
+  isolation enforced by row-level security rather than by application code. Two
+  database roles — one that owns the schema and one that owns nothing, holds no
+  `BYPASSRLS`, and serves every request.
+- Append-only enforced by grant: `config_versions` and `audit_events` have
+  `SELECT, INSERT` and nothing more; `security_events` has `INSERT` and no
+  `SELECT`, so the API can write its own security log and cannot edit it.
+- Authentication with Argon2id, short access tokens, and rotating refresh
+  tokens in an `HttpOnly` cookie. Replaying a spent token revokes the whole
+  family and records it (ADR 0009).
+- Scoped `sw_live_…` API tokens whose effective role is the lesser of their own
+  ceiling and their creator's current membership, so a demotion narrows every
+  token that person ever minted.
+- Resource-based authorisation with one permission table, plus two tests that
+  enumerate the route table and the schema and fail on anything that has not
+  written its decision down.
+- Immutable, content-addressed configuration versions. Saving an identical
+  document returns the existing version, enforced by a unique index over the
+  three cache keys rather than by a read-then-write race.
+- Asset upload identified by magic bytes rather than by the declared media
+  type, with transparency measured per pixel; an SSRF guard on `initialUrl`
+  that handles IPv4-mapped IPv6 and refuses names that do not resolve.
+- One error catalogue behind RFC 9457 problem documents, correlation ids on
+  every response, configurable rate limits with `Retry-After`, OpenTelemetry
+  traces and metrics, structured JSON logs, and liveness and readiness probes.
+- OpenAPI document generated from the route table and a TypeScript client
+  generated from the document, both committed, with CI failing when either is
+  stale.
+- k6 load scripts and a measured baseline: p95 12.1 ms for a config read and
+  20.4 ms for a save, against budgets of 100 ms and 400 ms
+  (`docs/perf/baseline-s06.md`).
+- 192 API tests. Programme total 947.
+
 ### Changed
 
 - `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
@@ -162,6 +197,17 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   transfer size, and dropping it removed three more advisories.
 
 ### Fixed
+
+#### Sprint 06
+
+- `CFG_CONTROL_CHARACTER`: a NUL in any configuration string passed the schema,
+  passed every semantic rule, and then could not be stored — PostgreSQL's
+  `jsonb` has no representation for U+0000, so the save failed with an error
+  naming nothing the author could act on. Fixed in the shared contract so the
+  studio says so while somebody is typing, rather than at the API boundary.
+- The nightly suite started its test database in a directory only root can
+  write, so every control-plane test failed on a GitHub runner and on any
+  developer's laptop.
 
 - The C# canonicaliser was not NFC-normalising at all, because
   `InvariantGlobalization=true` makes `String.Normalize` a silent no-op for

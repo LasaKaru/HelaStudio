@@ -27,7 +27,7 @@ builder.Services.AddShellwrightAuth(builder.Configuration);
 builder.Services.AddShellwrightAuthorization();
 builder.Services.AddShellwrightConfig(builder.Configuration);
 builder.Services.AddShellwrightTelemetry(builder.Configuration);
-builder.Services.AddShellwrightRateLimiting();
+builder.Services.AddShellwrightRateLimiting(builder.Configuration);
 builder.Services.AddShellwrightProblemDetails();
 builder.Services.AddOpenApi("v1", ApiDocument.Configure);
 

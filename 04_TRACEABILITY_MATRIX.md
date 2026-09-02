@@ -298,7 +298,7 @@ duplicated on purpose.
 
 | Behaviour              | Implementations               | Corpus                         | Cases |
 | ---------------------- | ----------------------------- | ------------------------------ | ----- |
-| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 29    |
+| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 32    |
 | Link routing           | Kotlin, Swift                 | `tests/fixtures/routing/`      | 21    |
 | Backtracking heuristic | TypeScript, C#, Kotlin, Swift | `tests/fixtures/regex-safety/` | 30    |
 
@@ -344,11 +344,35 @@ records what the generator produced, not whether the toolchain accepts it, and
 on iOS that gap is wider. The Codemagic `ios-verify` workflow is where it
 closes — see `SPRINT-05_REVIEW.md`.
 
+### Sprint 06 — as built
+
+| Task   | Deliverable                                   | Verified by                              | Status                                                                |
+| ------ | --------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------- |
+| T-06.1 | Data model, migrations, row-level security    | `TC-S06-API-001`…`006`, `SEC-001`, `002` | ✅ 2 roles, 14 policies; RLS proven at SQL level, not through the API |
+| T-06.2 | Identity and authentication                   | `TC-S06-API-007`…`016`, `SEC-003`, `004` | ✅ rotation + reuse detection; ◐ OAuth wired, unproven end to end     |
+| T-06.3 | Authorisation model                           | `TC-S06-API-017`…`024`, `SEC-005`        | ✅ resource-based; route table and schema both enumerated by tests    |
+| T-06.4 | Apps and config-version API                   | `TC-S06-API-025`…`042`, `SEC-006`, `007` | ✅ content-addressed, idempotent, ETag, keyset pages, SSRF guard      |
+| T-06.5 | Errors, rate limiting, observability, OpenAPI | `TC-S06-API-043`…`050`                   | ✅ one error catalogue; client generated from the route table         |
+| T-06.6 | Load testing and tuning                       | `TC-S06-PRF-001`, `002`                  | ◐ budgets met on a container; PgBouncer and a real host unmeasured    |
+
+API suite: **192 tests**, 0 failures.
+
+⚠️ **Three things are not what they will be in production, and the review says
+so rather than the matrix implying otherwise.** OAuth has never completed a real
+authorisation code exchange; blob storage is a local directory rather than R2;
+and rate limiting is in-process, so the limit is per instance. Each is one class
+or one credential away, and each is in `ACTION_REQUIRED.md`.
+
+⚠️ **No coverage gate exists.** Coverage is collected and uploaded by CI and
+nothing fails on it, for the codegen package as well as this one. The sprint
+asked for ≥ 80% line and ≥ 70% branch; that number is currently unknown rather
+than met.
+
 ### Cross-implementation contracts
 
 | Behaviour              | Implementations               | Corpus                         | Cases |
 | ---------------------- | ----------------------------- | ------------------------------ | ----- |
-| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 31    |
+| Config validation      | TypeScript, C#                | `tests/fixtures/expected/`     | 32    |
 | Link routing           | Kotlin, Swift                 | `tests/fixtures/routing/`      | 21    |
 | Backtracking heuristic | TypeScript, C#, Kotlin, Swift | `tests/fixtures/regex-safety/` | 30    |
 
@@ -356,8 +380,14 @@ closes — see `SPRINT-05_REVIEW.md`.
 different thing and worth not conflating: a golden record of one
 implementation's output, not a contract between two.
 
-Programme total: **739 tests** — 228 TypeScript (226 config-schema, 2 studio),
-338 C# (170 config-schema, 168 codegen), 125 Kotlin, 48 Swift.
+Programme total: **947 tests** — 241 TypeScript (239 config-schema, 2 studio),
+533 C# (173 config-schema, 168 codegen, 192 API), 125 Kotlin, 48 Swift.
+
+⚠️ The API suite needs a real PostgreSQL and will not run without one. The
+fixture starts a cluster itself when no connection strings are in the
+environment, so `dotnet test` works on a clean checkout — and it fails loudly
+rather than skipping, because a security test that quietly does not run leaves
+the pipeline green either way.
 
 ⚠️ Run the TypeScript suites through `pnpm test`, not `vitest` from the
 repository root. The studio's two tests need the jsdom environment its own
