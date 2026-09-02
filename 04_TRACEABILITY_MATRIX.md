@@ -84,12 +84,12 @@ Maps every requirement from `SHELLWRIGHT_MASTER_SPEC.md` §12 to the sprint that
 | Req   | Description                              | Sprint        | Test IDs                           | Status    |
 | ----- | ---------------------------------------- | ------------- | ---------------------------------- | --------- |
 | BD-01 | Deterministic codegen both platforms     | S04, S05      | `TC-S04-GEN-029`, `TC-S05-GEN-004` | ☐         |
-| BD-02 | Android APK/AAB                          | S07           | `TC-S07-BLD-*`                     | ☐         |
+| BD-02 | Android APK/AAB                          | S07           | `TC-S07-BLD-*`                     | ⚠️        |
 | BD-03 | iOS IPA                                  | S08           | `TC-S08-BLD-017`–`028`             | ☐         |
 | BD-04 | Signing: managed / BYO / delegated       | S14           | `TC-S14-SEC-*`                     | ☐         |
 | BD-05 | App Store Connect API signing automation | S08, S14      | `TC-S08-BLD-019`                   | ☐         |
 | BD-06 | Android keystore generation and export   | S14           | `TC-S14-SEC-*`                     | ☐         |
-| BD-07 | Live build logs                          | S07           | `TC-S07-BLD-029`–`034`             | ☐         |
+| BD-07 | Live build logs                          | S07           | `TC-S07-BLD-029`–`034`             | ☑        |
 | BD-08 | ⭐ Reproducible builds                   | S04, S05, S08 | `TC-S04-GEN-029`                   | ☐         |
 | BD-09 | Toolchain version pinning per app        | S08           | `TC-S08-BLD-047`, `048`            | ☐         |
 | BD-10 | ⭐ Full source export                    | S19           | `TC-S19-*`                         | ☐         |
@@ -290,6 +290,21 @@ Android suite: **68 tests**, 0 failures at the close of Sprint 02;
 
 iOS `ShellCore` suite: **48 tests**, 0 failures.
 
+### Sprint 07 status notes
+
+⚠️ **BD-02 is partial.** Everything around the Android build is done and tested
+— the workflow, the sandbox arguments, the cache fast path, verification,
+storage, the API — but no APK has been produced by this pipeline, because there
+is no Android SDK in this environment. `zipalign` and `apksigner` are asserted
+at the argument level, the same footing as the container hardening and the iOS
+toolchain. The criterion stays open until a runner exists.
+
+☑ **BD-07 is done.** Logs stream live through a bounded Redis stream and are
+archived to disk, with credentials removed before either sees them. What is not
+done is pushing them to a browser over a WebSocket; `BuildLogReader` pages the
+stream and returns a resume position, which is what a client polls. Fan-out
+arrives with the studio.
+
 ### Cross-implementation contracts
 
 The count of behaviours implemented more than once, and what holds each one
@@ -380,8 +395,20 @@ than met.
 different thing and worth not conflating: a golden record of one
 implementation's output, not a contract between two.
 
-Programme total: **947 tests** — 241 TypeScript (239 config-schema, 2 studio),
-533 C# (173 config-schema, 168 codegen, 192 API), 125 Kotlin, 48 Swift.
+Programme total: **1,134 tests** — 241 TypeScript (239 config-schema, 2 studio),
+720 C# (173 config-schema, 168 codegen, 228 API, 151 orchestrator), 125 Kotlin,
+48 Swift.
+
+⚠️ The orchestrator suite needs a real PostgreSQL, a real Redis and a real
+Temporal, for the same reason: what it checks is their behaviour. Each fixture
+starts what it needs when the corresponding connection string is absent.
+
+⚠️ **Do not run the API and orchestrator suites against one database at the same
+time.** Both fixtures `DROP SCHEMA public CASCADE` and re-migrate on start, so a
+concurrent run has the schema pulled out from under it and fails in ways that
+look like real defects — four of them, once, while this matrix was being
+written. Run them one after another, or point one at a second database with
+`SHELLWRIGHT_TEST_PG_*`.
 
 ⚠️ The API suite needs a real PostgreSQL and will not run without one. The
 fixture starts a cluster itself when no connection strings are in the

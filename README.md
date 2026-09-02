@@ -33,7 +33,7 @@ Needs Node 22, pnpm 10, and the .NET 10 SDK.
 pnpm install
 pnpm build          # config schema, then the studio
 pnpm test           # 241 TypeScript tests
-dotnet test         # 533 C# tests, including the cross-language contract
+dotnet test         # 720 C# tests, including the cross-language contract
 pnpm verify         # everything CI runs, the way CI runs it
 pnpm --filter @shellwright/studio dev   # the studio on http://localhost:5173
 ```

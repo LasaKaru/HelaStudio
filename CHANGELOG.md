@@ -188,6 +188,34 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   (`docs/perf/baseline-s06.md`).
 - 192 API tests. Programme total 947.
 
+#### Sprint 07 — build orchestration
+
+- `services/orchestrator`: Temporal workflows driving Android builds, with
+  retries, cancellation, heartbeats and compensation that runs even when the
+  workflow is being cancelled (ADR 0010).
+- A working three-way cache fast path. `Patch` replaces one uncompiled JSON
+  entry in a cached APK and re-signs — 0.51 s for a 20 MB archive — where a
+  compile takes minutes. The outcome names are held to what the code does: an
+  earlier version reported a patch after running a full build.
+- `shellwright_runner`, a third database role for the orchestrator: total reach
+  over tenants, six tables, no `BYPASSRLS`. It cannot read a user, an
+  organisation, a membership or any credential table at all. Every policy is
+  scoped `TO shellwright_runner`, because permissive policies are OR'd and one
+  missing clause would hand the API's role every tenant's rows.
+- Build logs to two destinations that fail independently: an ndjson archive that
+  is the record, and a bounded Redis stream that is a convenience. Credentials
+  are removed on the way in, driven by a corpus of what build tools actually
+  print — including three cases that must survive redaction untouched.
+- Six build endpoints. `Idempotency-Key` is required on start, because a retried
+  build costs runner minutes somebody is billed for; idempotence is a unique
+  index, not a read-then-write. Concurrency is capped per organisation.
+- Artifact downloads are 15-minute signed links from an anonymous endpoint,
+  backed by one `SECURITY DEFINER` function rather than a policy-bypassing
+  connection.
+- Metering that survives Temporal's retries: one row per build, enforced by a
+  unique index and `ON CONFLICT DO NOTHING`.
+- 187 new tests (151 orchestrator, 36 API). Programme total 1,134.
+
 ### Changed
 
 - `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
