@@ -197,8 +197,11 @@ public sealed class AuthenticationTests(PostgresFixture fixture) : IDisposable
         wrongPassword.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         unknownAccount.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
-        var first = await wrongPassword.Content.ReadAsStringAsync();
-        var second = await unknownAccount.Content.ReadAsStringAsync();
+        // Compared with the per-request identifiers removed. Those differ by
+        // design — they are how support finds one request among millions — and
+        // they carry nothing about whether the account exists.
+        var first = await StableBodyAsync(wrongPassword);
+        var second = await StableBodyAsync(unknownAccount);
         second.Should().Be(first, "a different body would answer 'does this account exist'");
     }
 
@@ -357,6 +360,18 @@ public sealed class AuthenticationTests(PostgresFixture fixture) : IDisposable
     }
 
     private sealed record Session(string AccessToken, string RefreshSecret, Guid UserId);
+
+    /// <summary>The response body with the fields that legitimately vary removed.</summary>
+    private static async Task<string> StableBodyAsync(HttpResponseMessage response)
+    {
+        var body = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            await response.Content.ReadAsStringAsync())!;
+
+        body.Remove("traceId");
+        body.Remove("correlationId");
+
+        return JsonSerializer.Serialize(body.OrderBy(x => x.Key, StringComparer.Ordinal));
+    }
 
     private static async Task<Session> SignInAsync(HttpClient client, string? email = null, string? password = null)
     {

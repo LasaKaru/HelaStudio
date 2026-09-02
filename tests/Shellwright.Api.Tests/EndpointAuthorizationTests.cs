@@ -63,6 +63,19 @@ public sealed class EndpointAuthorizationTests(PostgresFixture fixture) : IDispo
         var expected = new[]
         {
             "GET /health/live",
+
+            // Readiness is anonymous for the same reason liveness is: it is
+            // read by a load balancer and an orchestrator, neither of which has
+            // credentials, and it reports whether a dependency answered rather
+            // than anything about it.
+            "GET /health/ready",
+
+            // ⚠️ The OpenAPI document is public, which is a decision rather
+            // than an oversight. It describes the shape of the API and no data,
+            // it is the same document published as customer documentation, and
+            // requiring a token to fetch it would mean a client cannot generate
+            // its bindings until after it can already authenticate.
+            "GET /openapi/{documentName}.json",
             "POST /v1/auth/register",
             "POST /v1/auth/login",
             "POST /v1/auth/refresh",

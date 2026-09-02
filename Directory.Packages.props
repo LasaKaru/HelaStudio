@@ -43,6 +43,35 @@
          the alternative was writing the KDF ourselves, which is the one thing
          the standards document says never to do. -->
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <!-- ⚠️ Pinned ahead of what Microsoft.AspNetCore.OpenApi asks for, and
+         pinned *within* 2.x rather than to the newest release.
+
+         The 2.0.x it resolves to on its own carries a high-severity advisory
+         (GHSA-v5pm-xwqc-g5wc) that the security job's vulnerable-package scan
+         fails the build on, correctly. The obvious fix, taking the current 3.x,
+         does not work: 3.x made IOpenApiMediaType.Example read-only, and the
+         XML-comment source generator inside Microsoft.AspNetCore.OpenApi 10
+         still assigns to it, so the build fails in generated code. 2.12.2 is
+         the newest release that is both patched and still the API that
+         generator was written against.
+         Central transitive pinning is on, so naming it here is what lifts it. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
+
+    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
+
+    <!-- ⚠️ 1.18.0 rather than the 1.13.x the instrumentation packages resolve
+         to on their own: three moderate advisories against the OTLP exporter
+         and one against OpenTelemetry.Api are fixed there. Kept on one version
+         across the family, because mixing OpenTelemetry versions produces
+         type-load failures at startup rather than at build. -->
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.13.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

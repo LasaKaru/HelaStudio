@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Endpoints;
 
@@ -56,21 +59,29 @@ public static class OrgEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var group = app.MapGroup("/v1").WithTags("Organisations").RequireAuthorization();
+        var group = app.MapGroup("/v1")
+            .WithTags("Organisations")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Write);
 
         group.MapGet("/orgs", ListOrgsAsync)
+            .Produces<IReadOnlyList<OrgResponse>>()
             .WithSummary("List the organisations the caller belongs to.");
 
         group.MapPost("/orgs", CreateOrgAsync)
+            .Produces<OrgResponse>(StatusCodes.Status201Created)
             .WithSummary("Create an organisation and become its owner.");
 
         group.MapGet("/orgs/{orgId:guid}/workspaces", ListWorkspacesAsync)
+            .Produces<IReadOnlyList<WorkspaceResponse>>()
             .WithSummary("List an organisation's workspaces.");
 
         group.MapPost("/orgs/{orgId:guid}/workspaces", CreateWorkspaceAsync)
+            .Produces<WorkspaceResponse>(StatusCodes.Status201Created)
             .WithSummary("Create a workspace.");
 
         group.MapGet("/orgs/{orgId:guid}/members", ListMembersAsync)
+            .Produces<IReadOnlyList<MemberResponse>>()
             .WithSummary("List an organisation's members.");
 
         group.MapPut("/orgs/{orgId:guid}/members/{userId:guid}", SetMemberRoleAsync)
@@ -118,14 +129,14 @@ public static class OrgEndpoints
     {
         if (guard.UserId is not { } userId)
         {
-            return TypedResults.Unauthorized();
+            return ApiProblem.From(ApiErrors.Unauthenticated);
         }
 
         var slug = Slug.From(request.Slug ?? request.Name);
 
         if (slug.Length == 0)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["slug"] = ["A name must contain at least one letter or digit."],
             });
@@ -161,10 +172,7 @@ public static class OrgEndpoints
             }
             catch (DbUpdateException exception) when (exception.IsUniqueViolation())
             {
-                return TypedResults.Problem(
-                    title: "Slug taken",
-                    detail: $"'{slug}' is already in use. Choose another.",
-                    statusCode: StatusCodes.Status409Conflict);
+                return ApiProblem.From(ApiErrors.NameTaken, $"'{slug}' is already in use. Choose another.");
             }
 
             await Audit.WriteAsync(
@@ -217,7 +225,7 @@ public static class OrgEndpoints
 
         if (slug.Length == 0)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["slug"] = ["A name must contain at least one letter or digit."],
             });
@@ -239,10 +247,9 @@ public static class OrgEndpoints
         }
         catch (DbUpdateException exception) when (exception.IsUniqueViolation())
         {
-            return TypedResults.Problem(
-                title: "Slug taken",
-                detail: $"'{slug}' is already a workspace in this organisation.",
-                statusCode: StatusCodes.Status409Conflict);
+            return ApiProblem.From(
+                ApiErrors.NameTaken,
+                $"'{slug}' is already a workspace in this organisation.");
         }
 
         return TypedResults.Created(
@@ -291,10 +298,7 @@ public static class OrgEndpoints
         // between them is decorative.
         if (request.Role > caller)
         {
-            return TypedResults.Problem(
-                title: "Not allowed",
-                detail: "You cannot grant a role above your own.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ApiProblem.From(ApiErrors.Forbidden, "You cannot grant a role above your own.");
         }
 
         var existing = await database.OrgMembers
@@ -307,7 +311,7 @@ public static class OrgEndpoints
             // is a flow of its own, and it is not this one.
             if (!await database.Users.AnyAsync(x => x.Id == userId, cancellationToken))
             {
-                return TypedResults.Problem(title: "Not found", statusCode: StatusCodes.Status404NotFound);
+                return ApiProblem.From(ApiErrors.NotFound);
             }
 
             database.OrgMembers.Add(new OrgMember
@@ -329,10 +333,7 @@ public static class OrgEndpoints
 
                 if (owners <= 1)
                 {
-                    return TypedResults.Problem(
-                        title: "Last owner",
-                        detail: "Promote somebody else to owner first.",
-                        statusCode: StatusCodes.Status409Conflict);
+                    return ApiProblem.From(ApiErrors.LastOwner, "Promote somebody else to owner first.");
                 }
             }
 

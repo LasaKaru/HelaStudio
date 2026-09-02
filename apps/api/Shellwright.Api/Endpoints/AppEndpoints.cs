@@ -2,11 +2,14 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Config;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 using Shellwright.ConfigSchema;
 
 namespace Shellwright.Api.Endpoints;
@@ -45,15 +48,21 @@ public static class AppEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var group = app.MapGroup("/v1").WithTags("Apps").RequireAuthorization();
+        var group = app.MapGroup("/v1")
+            .WithTags("Apps")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Write);
 
         group.MapGet("/workspaces/{workspaceId:guid}/apps", ListAsync)
+            .Produces<IReadOnlyList<AppResponse>>()
             .WithSummary("List a workspace's apps.");
 
         group.MapPost("/workspaces/{workspaceId:guid}/apps", CreateAsync)
+            .Produces<AppResponse>(StatusCodes.Status201Created)
             .WithSummary("Create an app and seed its first configuration.");
 
         group.MapGet("/apps/{appId:guid}", GetAsync)
+            .Produces<AppResponse>()
             .WithSummary("Describe an app.");
 
         return app;
@@ -136,7 +145,7 @@ public static class AppEndpoints
         // future component that reads the field, one of which will forget.
         if (await urls.CheckAsync(request.InitialUrl, cancellationToken) is { } unsafeUrl)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["initialUrl"] = [unsafeUrl],
             });
@@ -163,10 +172,9 @@ public static class AppEndpoints
         }
         catch (DbUpdateException exception) when (exception.IsUniqueViolation())
         {
-            return TypedResults.Problem(
-                title: "Bundle id taken",
-                detail: $"'{request.BundleId}' already exists in this workspace.",
-                statusCode: StatusCodes.Status409Conflict);
+            return ApiProblem.From(
+                ApiErrors.NameTaken,
+                $"'{request.BundleId}' already exists in this workspace.");
         }
 
         // A new app gets a first version immediately, so that "the current

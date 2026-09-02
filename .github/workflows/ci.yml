@@ -179,6 +179,22 @@ jobs:
           dotnet test --no-build -c Release
           --collect:"XPlat Code Coverage"
           --results-directory ./coverage
+
+      # The committed OpenAPI document and the TypeScript client generated from
+      # it must match the route table they came from. A diff here means an
+      # endpoint changed and its client did not, which is the drift this whole
+      # arrangement exists to prevent.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generated API client is current
+        run: |
+          bash scripts/generate-api-client.sh
+          git diff --exit-code -- packages/api-client/openapi packages/api-client/src/generated \
+            || { echo "::error::The API client is stale. Run: bash scripts/generate-api-client.sh"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

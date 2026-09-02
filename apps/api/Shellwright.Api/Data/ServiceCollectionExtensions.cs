@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Shellwright.Api.Observability;
 
 namespace Shellwright.Api.Data;
 
@@ -22,6 +23,8 @@ public static class DataServiceCollectionExtensions
 
         services.AddScoped<TenantContext>();
         services.AddScoped<TenantConnectionInterceptor>();
+        services.AddScoped<QueryCounter>();
+        services.AddScoped<QueryCountInterceptor>();
 
         services.AddDbContext<ShellwrightDbContext>((provider, options) =>
         {
@@ -34,6 +37,11 @@ public static class DataServiceCollectionExtensions
             // true — a singleton interceptor would capture the first request's
             // tenant and serve it to everyone afterwards.
             options.AddInterceptors(provider.GetRequiredService<TenantConnectionInterceptor>());
+
+            // Scoped for the same reason: the count being watched is per
+            // request, and a singleton would accumulate across all of them and
+            // warn about the fifth request rather than about a loop.
+            options.AddInterceptors(provider.GetRequiredService<QueryCountInterceptor>());
 
             // ⚠️ Reads never track. The control plane's write paths are small
             // and explicit; its read paths are the hot ones, and change

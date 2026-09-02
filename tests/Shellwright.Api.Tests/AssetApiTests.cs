@@ -76,7 +76,7 @@ public sealed class AssetApiTests(PostgresFixture fixture) : IDisposable
 
         var response = await UploadAsync(tenant, zip, "image/png");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableContent);
         (await response.Content.ReadAsStringAsync()).Should().Contain("bytes decide");
     }
 
@@ -90,7 +90,7 @@ public sealed class AssetApiTests(PostgresFixture fixture) : IDisposable
 
         var response = await UploadAsync(tenant, header, "image/png");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableContent);
     }
 
     /// <summary>An empty upload is refused rather than stored as a zero-byte asset.</summary>
@@ -101,7 +101,7 @@ public sealed class AssetApiTests(PostgresFixture fixture) : IDisposable
 
         var response = await UploadAsync(tenant, [], "image/png");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableContent);
     }
 
     /// <summary>Oversized uploads are cut off rather than buffered whole.</summary>

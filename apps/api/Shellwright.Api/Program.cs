@@ -1,11 +1,16 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.RateLimiting;
 using Shellwright.Api.Auth;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Config;
 using Shellwright.Api.Data;
 using Shellwright.Api.Endpoints;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddShellwrightLogging();
 
 // ⚠️ Enums cross the wire as their names, in both directions.
 //
@@ -21,6 +26,10 @@ builder.Services.AddShellwrightData(builder.Configuration);
 builder.Services.AddShellwrightAuth(builder.Configuration);
 builder.Services.AddShellwrightAuthorization();
 builder.Services.AddShellwrightConfig(builder.Configuration);
+builder.Services.AddShellwrightTelemetry(builder.Configuration);
+builder.Services.AddShellwrightRateLimiting();
+builder.Services.AddShellwrightProblemDetails();
+builder.Services.AddOpenApi("v1", ApiDocument.Configure);
 
 // ⚠️ Deny by default. Without this, an endpoint that nobody remembered to
 // decorate is anonymous, and the mistake is invisible in review because the
@@ -35,21 +44,23 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+// ⚠️ Order is the contract here, and each step depends on the one before it.
+//
+//   correlation   first, so every log line and every failure below carries it
+//   exceptions    outside everything that can throw
+//   rate limiting before authentication, so an unauthenticated flood is
+//                 rejected before it costs an Argon2 verification
+//   authentication establishes the subject
+//   tenant scope  stamps that subject onto database connections
+//   authorisation decides, with both available
+app.UseMiddleware<CorrelationMiddleware>();
+app.UseExceptionHandler();
+app.UseRateLimiter();
 app.UseAuthentication();
-
-// Between authentication and authorisation: the subject has been established,
-// and nothing has opened a database connection yet.
 app.UseMiddleware<TenantScopeMiddleware>();
-
 app.UseAuthorization();
 
-// Liveness answers "is this process running", and nothing else. Anything that
-// touches a dependency belongs in readiness: a liveness probe that fails when
-// the database blips will restart every healthy instance at once.
-app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
-    .AllowAnonymous()
-    .ExcludeFromDescription();
-
+app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapOrgEndpoints();
 app.MapApiTokenEndpoints();
@@ -57,7 +68,18 @@ app.MapAppEndpoints();
 app.MapConfigEndpoints();
 app.MapAssetEndpoints();
 
-app.Run();
+app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
+
+// Writing the document and exiting, rather than serving it, is what lets CI
+// regenerate the TypeScript client without starting a server or reaching a
+// database.
+if (ApiDocument.ShouldExport(args, out var destination))
+{
+    await ApiDocument.WriteAsync(app, destination);
+    return;
+}
+
+await app.RunAsync();
 
 /// <summary>Entry point marker so integration tests can boot the real application.</summary>
 public partial class Program;

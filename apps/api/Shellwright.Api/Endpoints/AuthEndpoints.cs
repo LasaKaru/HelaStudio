@@ -3,12 +3,15 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Shellwright.Api.Auth;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
 using Shellwright.Api.Email;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Endpoints;
 
@@ -70,7 +73,9 @@ public static class AuthEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var group = app.MapGroup("/v1/auth").WithTags("Authentication");
+        var group = app.MapGroup("/v1/auth")
+            .WithTags("Authentication")
+            .RequireRateLimiting(RateLimitPolicies.Auth);
 
         group.MapPost("/register", RegisterAsync)
             .AllowAnonymous()
@@ -78,10 +83,12 @@ public static class AuthEndpoints
 
         group.MapPost("/login", LoginAsync)
             .AllowAnonymous()
+            .Produces<SessionResponse>()
             .WithSummary("Exchange credentials for an access token and a refresh cookie.");
 
         group.MapPost("/refresh", RefreshAsync)
             .AllowAnonymous()
+            .Produces<SessionResponse>()
             .WithSummary("Rotate the refresh cookie and issue a new access token.");
 
         group.MapPost("/logout", LogoutAsync)
@@ -102,6 +109,7 @@ public static class AuthEndpoints
 
         group.MapGet("/me", Me)
             .RequireAuthorization()
+            .Produces<CallerResponse>()
             .WithSummary("Describe the caller.");
 
         group.MapGet("/oauth/{provider}", StartOAuthAsync)
@@ -166,18 +174,16 @@ public static class AuthEndpoints
 
         if (outcome == SignInOutcome.LockedOut)
         {
-            return TypedResults.Problem(
-                title: "Too many attempts",
-                detail: "This account is temporarily refusing sign-ins. Try again shortly.",
-                statusCode: StatusCodes.Status429TooManyRequests);
+            return ApiProblem.From(
+                ApiErrors.TooManyAttempts,
+                "This account is temporarily refusing sign-ins. Try again shortly.");
         }
 
         if (outcome != SignInOutcome.Success || user is null)
         {
-            return TypedResults.Problem(
-                title: "Invalid credentials",
-                detail: "That email address and password do not match an account.",
-                statusCode: StatusCodes.Status401Unauthorized);
+            return ApiProblem.From(
+                ApiErrors.InvalidCredentials,
+                "That email address and password do not match an account.");
         }
 
         var refresh = await refreshTokens.IssueAsync(user.Id, cancellationToken);
@@ -205,9 +211,7 @@ public static class AuthEndpoints
 
         if (presented is null)
         {
-            return TypedResults.Problem(
-                title: "No session",
-                statusCode: StatusCodes.Status401Unauthorized);
+            return ApiProblem.From(ApiErrors.SessionExpired, "Sign in again.");
         }
 
         var (result, failure) = await refreshTokens.RotateAsync(presented, cancellationToken);
@@ -220,11 +224,11 @@ public static class AuthEndpoints
             // attacker holding a replayed token must not be told that the
             // replay is what gave them away — the family is already revoked,
             // and saying so only tells them to move faster next time.
-            return TypedResults.Problem(
-                title: "Session expired",
-                detail: "Sign in again.",
-                statusCode: StatusCodes.Status401Unauthorized,
-                extensions: new Dictionary<string, object?> { ["reason"] = failure.ToString() });
+            // ⚠️ No reason is reported. Expiry, revocation, and detected reuse
+            // are one answer from outside: telling an attacker that the replay
+            // is what gave them away only tells them to move faster next time.
+            // The distinction is in security_events, which the API cannot read.
+            return ApiProblem.From(ApiErrors.SessionExpired, "Sign in again.");
         }
 
         cookie.Write(response, result.Secret, result.ExpiresAt);
@@ -270,10 +274,9 @@ public static class AuthEndpoints
 
         if (userId is null)
         {
-            return TypedResults.Problem(
-                title: "Link expired",
-                detail: "That verification link is no longer valid. Request another.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return ApiProblem.From(
+                ApiErrors.LinkExpired,
+                "That verification link is no longer valid. Request another.");
         }
 
         await database.Users
@@ -325,7 +328,7 @@ public static class AuthEndpoints
     {
         if (request.Password.Length < 10)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["password"] = ["A password must be at least 10 characters."],
             });
@@ -335,10 +338,9 @@ public static class AuthEndpoints
 
         if (userId is null)
         {
-            return TypedResults.Problem(
-                title: "Link expired",
-                detail: "That reset link is no longer valid. Request another.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return ApiProblem.From(
+                ApiErrors.LinkExpired,
+                "That reset link is no longer valid. Request another.");
         }
 
         var user = await database.Users.AsTracking().FirstAsync(x => x.Id == userId, cancellationToken);
@@ -379,10 +381,9 @@ public static class AuthEndpoints
             ? TypedResults.Challenge(
                 new AuthenticationProperties { RedirectUri = $"/v1/auth/oauth/{provider}/complete" },
                 [provider])
-            : TypedResults.Problem(
-                title: "Unknown provider",
-                detail: $"'{provider}' is not configured on this deployment.",
-                statusCode: StatusCodes.Status404NotFound);
+            : ApiProblem.From(
+                ApiErrors.UnknownProvider,
+                $"'{provider}' is not configured on this deployment.");
     }
 
     /// <summary>
@@ -407,9 +408,7 @@ public static class AuthEndpoints
 
         if (!result.Succeeded)
         {
-            return TypedResults.Problem(
-                title: "Sign-in did not complete",
-                statusCode: StatusCodes.Status401Unauthorized);
+            return ApiProblem.From(ApiErrors.SignInIncomplete);
         }
 
         var providerUserId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -423,10 +422,9 @@ public static class AuthEndpoints
             // nothing useful to do about it here beyond saying so plainly:
             // creating an account without an address would produce one nobody
             // can recover.
-            return TypedResults.Problem(
-                title: "No address from provider",
-                detail: "Make an email address visible to Shellwright at your provider, then try again.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return ApiProblem.From(
+                ApiErrors.SignInIncomplete,
+                "Make an email address visible to Shellwright at your provider, then try again.");
         }
 
         var user = await OAuthProviders.LinkAsync(
@@ -457,7 +455,7 @@ public static class AuthEndpoints
     /// ("one number, one symbol") push people towards <c>Password1!</c> and are
     /// deliberately absent.
     /// </remarks>
-    private static ValidationProblem? RejectWeakPassword(CredentialsRequest request)
+    private static IResult? RejectWeakPassword(CredentialsRequest request)
     {
         var problems = new Dictionary<string, string[]>();
 
@@ -470,6 +468,6 @@ public static class AuthEndpoints
             problems["password"] = ["A password cannot be only whitespace."];
         }
 
-        return problems.Count > 0 ? TypedResults.ValidationProblem(problems) : null;
+        return problems.Count > 0 ? ApiProblem.Validation(problems) : null;
     }
 }

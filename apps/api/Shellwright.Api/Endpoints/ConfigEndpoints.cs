@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Config;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Endpoints;
 
@@ -57,12 +60,41 @@ public static class ConfigEndpoints
             .WithTags("Configuration")
             .RequireAuthorization();
 
-        group.MapGet("/", GetCurrentAsync).WithSummary("Read the current resolved configuration.");
-        group.MapPost("/", SaveAsync).WithSummary("Save a new configuration version.");
-        group.MapPost("/validate", ValidateAsync).WithSummary("Validate without saving.");
-        group.MapGet("/versions", ListVersionsAsync).WithSummary("List configuration versions, newest first.");
-        group.MapGet("/versions/{versionId:guid}", GetVersionAsync).WithSummary("Read one version.");
-        group.MapGet("/diff", DiffAsync).WithSummary("Compare two versions.");
+        // ⚠️ Reads and validation get the generous read limit, saves the
+        // token bucket. Validation is a write-shaped request that performs no
+        // write, and the studio issues one per debounced keystroke — putting it
+        // on the write limit would rate-limit typing.
+        group.MapGet("/", GetCurrentAsync)
+            .RequireRateLimiting(RateLimitPolicies.Read)
+            .Produces<VersionResponse>()
+            .Produces(StatusCodes.Status304NotModified)
+            .WithSummary("Read the current resolved configuration.");
+
+        group.MapPost("/", SaveAsync)
+            .RequireRateLimiting(RateLimitPolicies.Write)
+            .Produces<SaveResponse>(StatusCodes.Status201Created)
+            .Produces<SaveResponse>()
+            .WithSummary("Save a new configuration version.");
+
+        group.MapPost("/validate", ValidateAsync)
+            .RequireRateLimiting(RateLimitPolicies.Read)
+            .Produces<ValidationResponse>()
+            .WithSummary("Validate without saving.");
+
+        group.MapGet("/versions", ListVersionsAsync)
+            .RequireRateLimiting(RateLimitPolicies.Read)
+            .Produces<Page<VersionSummary>>()
+            .WithSummary("List configuration versions, newest first.");
+
+        group.MapGet("/versions/{versionId:guid}", GetVersionAsync)
+            .RequireRateLimiting(RateLimitPolicies.Read)
+            .Produces<VersionResponse>()
+            .WithSummary("Read one version.");
+
+        group.MapGet("/diff", DiffAsync)
+            .RequireRateLimiting(RateLimitPolicies.Read)
+            .Produces<DiffResponse>()
+            .WithSummary("Compare two versions.");
 
         return app;
     }
@@ -87,7 +119,7 @@ public static class ConfigEndpoints
 
         if (current is null)
         {
-            return TypedResults.Problem(title: "No configuration", statusCode: StatusCodes.Status404NotFound);
+            return ApiProblem.From(ApiErrors.NoConfiguration);
         }
 
         // ⚠️ The entity tag is the version id, and the version id is
@@ -135,10 +167,9 @@ public static class ConfigEndpoints
 
         if (check.Conflict)
         {
-            return TypedResults.Problem(
-                title: "Idempotency key reused",
-                detail: "That Idempotency-Key was used for a different request body.",
-                statusCode: StatusCodes.Status409Conflict);
+            return ApiProblem.From(
+                ApiErrors.IdempotencyKeyReused,
+                "That Idempotency-Key was used for a different request body.");
         }
 
         if (check.Replay is { } remembered)
@@ -156,15 +187,15 @@ public static class ConfigEndpoints
         }
         catch (JsonException exception)
         {
-            return TypedResults.Problem(
-                title: "Malformed JSON",
-                detail: exception.Message,
-                statusCode: StatusCodes.Status400BadRequest);
+            // The parser's own message names the offset and the token, which
+            // is exactly what a person fixing it needs and carries nothing they
+            // did not already send.
+            return ApiProblem.From(ApiErrors.MalformedJson, exception.Message);
         }
 
         if (parsed?.Config is null)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["config"] = ["A configuration document is required."],
             });
@@ -233,10 +264,10 @@ public static class ConfigEndpoints
         }
         catch (JsonException exception)
         {
-            return TypedResults.Problem(
-                title: "Malformed JSON",
-                detail: exception.Message,
-                statusCode: StatusCodes.Status400BadRequest);
+            // The parser's own message names the offset and the token, which
+            // is exactly what a person fixing it needs and carries nothing they
+            // did not already send.
+            return ApiProblem.From(ApiErrors.MalformedJson, exception.Message);
         }
 
         var orgId = await OrgOfAsync(database, appId, cancellationToken);
@@ -280,7 +311,7 @@ public static class ConfigEndpoints
         }
         else if (!string.IsNullOrEmpty(cursor))
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["cursor"] = ["That cursor is not one this endpoint issued."],
             });
@@ -327,7 +358,7 @@ public static class ConfigEndpoints
             .FirstOrDefaultAsync(x => x.Id == versionId && x.AppId == appId, cancellationToken);
 
         return version is null
-            ? TypedResults.Problem(title: "Not found", statusCode: StatusCodes.Status404NotFound)
+            ? ApiProblem.From(ApiErrors.NotFound)
             : TypedResults.Ok(new VersionResponse(Summarise(version), version.Body));
     }
 
@@ -346,7 +377,7 @@ public static class ConfigEndpoints
 
         if (from is null || to is null)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["from"] = ["Both 'from' and 'to' version ids are required."],
             });
@@ -361,7 +392,7 @@ public static class ConfigEndpoints
 
         if (left is null || right is null)
         {
-            return TypedResults.Problem(title: "Not found", statusCode: StatusCodes.Status404NotFound);
+            return ApiProblem.From(ApiErrors.NotFound);
         }
 
         return TypedResults.Ok(new DiffResponse(

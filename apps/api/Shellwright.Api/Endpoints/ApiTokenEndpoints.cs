@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Shellwright.Api.Auth;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Endpoints;
 
@@ -51,11 +54,19 @@ public static class ApiTokenEndpoints
 
         var group = app.MapGroup("/v1/orgs/{orgId:guid}/tokens")
             .WithTags("API tokens")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Write);
 
-        group.MapGet("/", ListAsync).WithSummary("List an organisation's API tokens.");
-        group.MapPost("/", CreateAsync).WithSummary("Mint an API token and show the secret once.");
-        group.MapDelete("/{tokenId:guid}", RevokeAsync).WithSummary("Revoke an API token.");
+        group.MapGet("/", ListAsync)
+            .Produces<IReadOnlyList<ApiTokenResponse>>()
+            .WithSummary("List an organisation's API tokens.");
+
+        group.MapPost("/", CreateAsync)
+            .Produces<CreatedApiTokenResponse>(StatusCodes.Status201Created)
+            .WithSummary("Mint an API token and show the secret once.");
+
+        group.MapDelete("/{tokenId:guid}", RevokeAsync)
+            .WithSummary("Revoke an API token.");
 
         return app;
     }
@@ -108,10 +119,7 @@ public static class ApiTokenEndpoints
         // escalation with a REST endpoint in front of it.
         if (request.Role > caller)
         {
-            return TypedResults.Problem(
-                title: "Not allowed",
-                detail: "A token cannot be given a role above your own.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ApiProblem.From(ApiErrors.Forbidden, "A token cannot be given a role above your own.");
         }
 
         if (request.WorkspaceId is { } workspaceId)
@@ -123,7 +131,7 @@ public static class ApiTokenEndpoints
 
             if (workspaceOrg != orgId)
             {
-                return TypedResults.Problem(title: "Not found", statusCode: StatusCodes.Status404NotFound);
+                return ApiProblem.From(ApiErrors.NotFound);
             }
         }
 
@@ -181,7 +189,7 @@ public static class ApiTokenEndpoints
 
         if (token is null)
         {
-            return TypedResults.Problem(title: "Not found", statusCode: StatusCodes.Status404NotFound);
+            return ApiProblem.From(ApiErrors.NotFound);
         }
 
         // Revoking your own token needs no special standing — it is the thing

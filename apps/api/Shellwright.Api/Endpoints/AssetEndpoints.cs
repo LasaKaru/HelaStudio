@@ -1,9 +1,12 @@
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Shellwright.Api.Assets;
 using Shellwright.Api.Authorization;
 using Shellwright.Api.Data;
 using Shellwright.Api.Domain;
+using Shellwright.Api.Observability;
+using Shellwright.Api.Problems;
 
 namespace Shellwright.Api.Endpoints;
 
@@ -36,9 +39,12 @@ public static class AssetEndpoints
 
         var group = app.MapGroup("/v1/orgs/{orgId:guid}/assets")
             .WithTags("Assets")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Write);
 
         group.MapPost("/", UploadAsync)
+            .Produces<AssetResponse>(StatusCodes.Status201Created)
+            .Produces<AssetResponse>()
             .WithSummary("Upload an image and get back an asset reference.")
             .DisableAntiforgery();
 
@@ -69,10 +75,9 @@ public static class AssetEndpoints
 
         if (!read)
         {
-            return TypedResults.Problem(
-                title: "Too large",
-                detail: $"Images must be {ImageProbe.MaxBytes / (1024 * 1024)} MB or smaller.",
-                statusCode: StatusCodes.Status413PayloadTooLarge);
+            return ApiProblem.From(
+                ApiErrors.PayloadTooLarge,
+                $"Images must be {ImageProbe.MaxBytes / (1024 * 1024)} MB or smaller.");
         }
 
         var content = buffer.ToArray();
@@ -81,7 +86,7 @@ public static class AssetEndpoints
 
         if (refusal is not null || probed is null)
         {
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            return ApiProblem.Validation(new Dictionary<string, string[]>
             {
                 ["file"] = [refusal ?? "The upload could not be read as an image."],
             });

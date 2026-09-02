@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Shellwright.Api.Problems;
 using Shellwright.ConfigSchema;
 
 namespace Shellwright.Api.Endpoints;
@@ -23,11 +24,10 @@ public static class ProblemResults
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        return TypedResults.Problem(
-            title: "Configuration is not valid",
-            detail: $"{result.Errors.Length} error(s) must be fixed before this can be saved.",
-            statusCode: StatusCodes.Status422UnprocessableEntity,
-            extensions: new Dictionary<string, object?>
+        return ApiProblem.From(
+            ApiErrors.ConfigInvalid,
+            $"{result.Errors.Length} error(s) must be fixed before this can be saved.",
+            new Dictionary<string, object?>
             {
                 ["errors"] = Describe(result.Errors),
                 ["warnings"] = Describe(result.Warnings),

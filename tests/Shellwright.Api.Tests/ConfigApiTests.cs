@@ -352,7 +352,9 @@ public sealed class ConfigApiTests(PostgresFixture fixture) : IDisposable
 
         var response = await tenant.Client.GetAsync(Url($"{Config(tenant)}/versions?cursor=not-a-cursor"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // 422, not 400: the request parsed perfectly and its contents were
+        // unacceptable, which is a different thing for a client retrying.
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableContent);
     }
 
     /// <summary>A diff names what changed and nothing else.</summary>

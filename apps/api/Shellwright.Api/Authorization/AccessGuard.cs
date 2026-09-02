@@ -112,13 +112,10 @@ public sealed class AccessGuard(ShellwrightDbContext database, IHttpContextAcces
     public static IResult? Reject(Access access) => access switch
     {
         Access.Granted => null,
-        Access.Forbidden => TypedResults.Problem(
-            title: "Not allowed",
-            detail: "Your role in this organisation does not permit that.",
-            statusCode: StatusCodes.Status403Forbidden),
-        _ => TypedResults.Problem(
-            title: "Not found",
-            statusCode: StatusCodes.Status404NotFound),
+        Access.Forbidden => Problems.ApiProblem.From(
+            Problems.ApiErrors.Forbidden,
+            "Your role in this organisation does not permit that."),
+        _ => Problems.ApiProblem.From(Problems.ApiErrors.NotFound),
     };
 
     /// <summary>The caller's effective role in an organisation, or null if they have none.</summary>
