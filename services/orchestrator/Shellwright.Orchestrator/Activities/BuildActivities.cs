@@ -1,0 +1,294 @@
+using System.Diagnostics;
+using Shellwright.ConfigSchema;
+using Shellwright.Orchestrator.Sandbox;
+using Shellwright.Orchestrator.Workflows;
+using Temporalio.Activities;
+
+namespace Shellwright.Orchestrator.Activities;
+
+/// <summary>
+/// Everything the build workflow is not allowed to do itself.
+/// </summary>
+/// <remarks>
+/// The workflow is replayed, so it contains no clocks, no randomness, and no
+/// I/O. All of that lives here, where Temporal records the result once and
+/// replays the recording rather than the work.
+/// </remarks>
+/// <param name="store">Reads configurations, writes build records and usage.</param>
+/// <param name="cache">Finds and stores artifacts by cache key.</param>
+/// <param name="runners">Hands out runner slots.</param>
+/// <param name="sandbox">Runs the toolchain in isolation.</param>
+/// <param name="generator">Turns a configuration into a project.</param>
+/// <param name="verifier">Checks what the toolchain produced.</param>
+/// <param name="artifacts">Stores the finished artifact.</param>
+/// <param name="logs">Streams and archives build output.</param>
+/// <param name="hashContext">Deployment facts that feed the cache key.</param>
+public sealed class BuildActivities(
+    IBuildStore store,
+    IArtifactCache cache,
+    IRunnerPool runners,
+    IBuildSandbox sandbox,
+    IProjectGenerator generator,
+    IArtifactVerifier verifier,
+    IArtifactStore artifacts,
+    IBuildLogPipeline logs,
+    HashContext hashContext)
+{
+    /// <summary>How often the long build activity reports progress.</summary>
+    /// <remarks>
+    /// Six times inside the sixty-second heartbeat timeout, so a runner has to
+    /// miss several before Temporal gives up on it. One beat per timeout would
+    /// make an ordinary scheduling hiccup look like a dead runner.
+    /// </remarks>
+    public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(10);
+
+    /// <summary>Re-runs validation on the server, and computes the cache keys.</summary>
+    /// <param name="request">The build.</param>
+    /// <returns>What validation found.</returns>
+    /// <remarks>
+    /// ⚠️ Re-run rather than trusted. The studio validates, the API validates on
+    /// save, and this validates again — not because the earlier two are
+    /// unreliable, but because neither of them is what a build request has to
+    /// go through. A build can be started by an API token against a version
+    /// saved months ago under an older rule set.
+    /// </remarks>
+    [Activity(BuildActivityNames.Validate)]
+    public async Task<ValidationOutcome> ValidateAsync(BuildRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var stored = await store.LoadConfigAsync(request.ConfigVersionId, ActivityExecutionContext.Current.CancellationToken)
+            ?? throw BuildFailures.Permanent(
+                BuildFailures.ConfigInvalid,
+                $"Configuration version {request.ConfigVersionId} does not exist.");
+
+        if (stored.AppId != request.AppId)
+        {
+            // The API should never produce this, which is exactly why it is
+            // checked: a build that compiles one tenant's configuration under
+            // another tenant's app is the worst bug this system could have.
+            throw BuildFailures.Permanent(
+                BuildFailures.ConfigInvalid,
+                "That configuration version belongs to a different app.");
+        }
+
+        var validated = new ConfigValidator().Validate(stored.Body);
+
+        if (!validated.Result.Valid)
+        {
+            var first = validated.Result.Errors[0];
+            return new ValidationOutcome(
+                false,
+                $"{first.Code} at {first.Path}: {first.Message}",
+                new BuildHashes(string.Empty, string.Empty, string.Empty));
+        }
+
+        var hashes = ConfigHasher.Compute(validated.Resolved, hashContext);
+
+        return new ValidationOutcome(
+            true,
+            string.Empty,
+            new BuildHashes(hashes.CodeKey, hashes.AssetKey, hashes.ContentKey));
+    }
+
+    /// <summary>Looks for an artifact that can be reused.</summary>
+    /// <param name="request">The build.</param>
+    /// <param name="hashes">The cache keys.</param>
+    /// <returns>How much can be reused.</returns>
+    [Activity(BuildActivityNames.LookupCache)]
+    public async Task<CacheLookup> LookupCacheAsync(BuildRequest request, BuildHashes hashes)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return await cache.LookupAsync(
+            request.AppId,
+            request.Platform,
+            hashes,
+            ActivityExecutionContext.Current.CancellationToken);
+    }
+
+    /// <summary>Takes a runner slot.</summary>
+    /// <param name="request">The build.</param>
+    /// <returns>The lease.</returns>
+    [Activity(BuildActivityNames.LeaseRunner)]
+    public async Task<Workflows.RunnerLease> LeaseRunnerAsync(BuildRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var lease = await runners.TryLeaseAsync(request, ActivityExecutionContext.Current.CancellationToken);
+
+        // Retryable: the fleet being full is a condition that passes. The
+        // workflow's retry policy backs off, which is the behaviour a queue
+        // would have given us anyway, without the queue.
+        return lease ?? throw BuildFailures.Transient(
+            BuildFailures.RunnerUnavailable,
+            "No runner slot is free. Waiting for one to be released.");
+    }
+
+    /// <summary>Generates the platform project from the configuration.</summary>
+    /// <param name="request">The build.</param>
+    /// <param name="lease">The runner slot.</param>
+    /// <param name="hashes">The cache keys, recorded into the generated manifest.</param>
+    /// <returns>What was generated.</returns>
+    [Activity(BuildActivityNames.Generate)]
+    public async Task<GeneratedProject> GenerateAsync(
+        BuildRequest request,
+        Workflows.RunnerLease lease,
+        BuildHashes hashes)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var token = ActivityExecutionContext.Current.CancellationToken;
+
+        var stored = await store.LoadConfigAsync(request.ConfigVersionId, token)
+            ?? throw BuildFailures.Permanent(
+                BuildFailures.ConfigInvalid,
+                $"Configuration version {request.ConfigVersionId} disappeared mid-build.");
+
+        var prepared = await sandbox.PrepareAsync(request, lease, token);
+
+        return await generator.GenerateAsync(
+            new GenerationRequest(stored.Body, request.Platform, prepared.WorkspaceRoot, hashes),
+            token);
+    }
+
+    /// <summary>Runs the toolchain, or patches a cached artifact.</summary>
+    /// <param name="request">The build.</param>
+    /// <param name="lease">The runner slot.</param>
+    /// <param name="project">What was generated.</param>
+    /// <param name="cached">What the cache offered.</param>
+    /// <returns>What was produced.</returns>
+    [Activity(BuildActivityNames.Build)]
+    public async Task<BuiltArtifact> BuildAsync(
+        BuildRequest request,
+        Workflows.RunnerLease lease,
+        GeneratedProject project,
+        CacheLookup cached)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(lease);
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(cached);
+
+        var context = ActivityExecutionContext.Current;
+        var token = context.CancellationToken;
+        var stopwatch = Stopwatch.StartNew();
+
+        var command = BuildCommands.For(request, project);
+
+        var result = await sandbox.RunAsync(
+            lease,
+            command,
+            (line, isError, ct) => logs.AppendAsync(request.BuildId, line, isError, ct),
+
+            // ⚠️ Heartbeating is what makes cancellation and dead-runner
+            // detection work at all. Without it Temporal cannot tell a build
+            // that is compiling from a runner that has stopped existing, and
+            // waits out the twenty-minute timeout for both.
+            onProgress: () => context.Heartbeat(stopwatch.Elapsed.TotalSeconds),
+            cancellationToken: token);
+
+        stopwatch.Stop();
+
+        if (result.ExitCode != 0)
+        {
+            // ⚠️ Non-retryable. The same sources compiled by the same toolchain
+            // fail the same way, and each attempt costs runner minutes somebody
+            // is paying for.
+            throw BuildFailures.Permanent(
+                BuildFailures.CompilationFailed,
+                $"The build exited with code {result.ExitCode}. The log says why.");
+        }
+
+        var artifactPath = BuildCommands.ArtifactPath(request, project);
+
+        return new BuiltArtifact(
+            artifactPath,
+            (int)Math.Ceiling(result.Duration.TotalSeconds),
+            cached.Kind == CacheOutcome.Patchable);
+    }
+
+    /// <summary>Checks the signature, the manifest, the size, and the permissions.</summary>
+    /// <param name="request">The build.</param>
+    /// <param name="lease">The runner slot.</param>
+    /// <param name="built">What was produced.</param>
+    /// <returns>A task that completes when the artifact has been accepted.</returns>
+    [Activity(BuildActivityNames.Verify)]
+    public async Task VerifyAsync(BuildRequest request, Workflows.RunnerLease lease, BuiltArtifact built)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(built);
+
+        var verdict = await verifier.VerifyAsync(
+            request,
+            built.ArtifactPath,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        if (!verdict.Accepted)
+        {
+            throw BuildFailures.Permanent(BuildFailures.VerificationFailed, verdict.Reason);
+        }
+    }
+
+    /// <summary>Stores the artifact and records it against its cache keys.</summary>
+    /// <param name="request">The build.</param>
+    /// <param name="lease">The runner slot.</param>
+    /// <param name="built">What was produced.</param>
+    /// <param name="hashes">The cache keys.</param>
+    /// <returns>Where it ended up.</returns>
+    [Activity(BuildActivityNames.Upload)]
+    public async Task<UploadedArtifact> UploadAsync(
+        BuildRequest request,
+        Workflows.RunnerLease lease,
+        BuiltArtifact built,
+        BuildHashes hashes)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(built);
+
+        var token = ActivityExecutionContext.Current.CancellationToken;
+
+        var uploaded = await artifacts.StoreAsync(request, built.ArtifactPath, token);
+
+        await store.RecordArtifactAsync(request.BuildId, uploaded, token);
+        await cache.StoreAsync(request.AppId, request.Platform, hashes, uploaded, token);
+        await logs.ArchiveAsync(request.BuildId, token);
+
+        return uploaded;
+    }
+
+    /// <summary>Records that a build changed state.</summary>
+    /// <param name="buildId">The build.</param>
+    /// <param name="state">Where it moved to.</param>
+    /// <returns>A task that completes when the transition is durable.</returns>
+    [Activity(BuildActivityNames.RecordTransition)]
+    public async Task RecordTransitionAsync(Guid buildId, BuildState state) =>
+        await store.RecordTransitionAsync(buildId, state, ActivityExecutionContext.Current.CancellationToken);
+
+    /// <summary>Records metered usage.</summary>
+    /// <param name="usage">What to charge for.</param>
+    /// <returns>A task that completes when the row is durable.</returns>
+    [Activity(BuildActivityNames.RecordUsage)]
+    public async Task RecordUsageAsync(UsageRecord usage) =>
+        await store.RecordUsageAsync(usage, ActivityExecutionContext.Current.CancellationToken);
+
+    /// <summary>Destroys the workspace and returns the runner slot.</summary>
+    /// <param name="lease">The lease.</param>
+    /// <returns>A task that completes once the slot is free.</returns>
+    /// <remarks>
+    /// ⚠️ Destroys first, releases second. Releasing a slot whose workspace
+    /// still exists offers the next tenant a directory full of somebody else's
+    /// source.
+    /// </remarks>
+    [Activity(BuildActivityNames.ReleaseRunner)]
+    public async Task ReleaseRunnerAsync(Workflows.RunnerLease lease)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var token = ActivityExecutionContext.Current.CancellationToken;
+
+        await sandbox.DestroyAsync(lease, token);
+        await runners.ReleaseAsync(lease, token);
+    }
+}

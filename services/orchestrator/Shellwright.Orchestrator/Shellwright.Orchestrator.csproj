@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Shellwright.Orchestrator</RootNamespace>
+    <AssemblyName>Shellwright.Orchestrator</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <!-- Same reason as every other project that touches the config schema: its
+         canonicalisation NFC-normalises, and String.Normalize is a silent no-op
+         for non-ASCII under globalization-invariant mode. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Temporalio" />
+    <PackageReference Include="Temporalio.Extensions.Hosting" />
+    <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../codegen/Shellwright.Codegen/Shellwright.Codegen.csproj" />
+    <ProjectReference Include="../../../packages/config-schema/dotnet/Shellwright.ConfigSchema/Shellwright.ConfigSchema.csproj" />
+  </ItemGroup>
+
+</Project>

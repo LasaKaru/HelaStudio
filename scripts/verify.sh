@@ -89,6 +89,12 @@ if have dotnet ".NET — dotnet not on PATH"; then
 		check "test database" sh -c 'bash scripts/dev-postgres.sh >/dev/null'
 	fi
 
+	# The orchestrator's workflow tests start a Temporal dev server. The
+	# fixture prefers a binary already on PATH over downloading 40 MB.
+	if ! command -v temporal >/dev/null 2>&1; then
+		skipped+=("temporal CLI — run scripts/dev-temporal.sh; the SDK will download one instead")
+	fi
+
 	check "dotnet format" dotnet format --verify-no-changes
 	# Release, not Debug: analyser rules and package licence gates only bite here.
 	check "dotnet build"  dotnet build -c Release

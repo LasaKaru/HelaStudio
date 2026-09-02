@@ -74,6 +74,14 @@
     <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Build orchestration">
+    <PackageVersion Include="Temporalio" Version="1.18.0" />
+    <PackageVersion Include="Temporalio.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.8.24" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
