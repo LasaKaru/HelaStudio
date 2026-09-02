@@ -13,7 +13,7 @@ one anyway. Every time something new leaks, the line that leaked it goes in here
 first and the pattern goes in second.
 
 The last three cases are the other half of the job. A filter that redacts
-everything is useless: a keystore *path*, a compilation error, and a version
+everything is useless: a keystore _path_, a compilation error, and a version
 string containing the word "key" all have to survive intact, or the log stops
 being something a person can debug from.
 

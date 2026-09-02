@@ -30,11 +30,11 @@ absent, so `dotnet test` works on a clean checkout with nothing exported.
 
 A build's output goes to two places at once, and they fail independently.
 
-| | Archive | Live stream |
-|---|---|---|
-| Where | ndjson on disk, one file per build | a Redis Stream, `build:{id}:logs` |
-| Kept | forever | the last `LiveStreamLines` lines |
-| If it fails | the build fails | the build carries on |
+|             | Archive                            | Live stream                       |
+| ----------- | ---------------------------------- | --------------------------------- |
+| Where       | ndjson on disk, one file per build | a Redis Stream, `build:{id}:logs` |
+| Kept        | forever                            | the last `LiveStreamLines` lines  |
+| If it fails | the build fails                    | the build carries on              |
 
 The asymmetry is the design. The archive is the record a customer can come back
 to in six months; the live stream is a convenience for whoever is watching right
@@ -55,7 +55,7 @@ The patterns cover what build tools actually print: Gradle echoing a `-P`
 property on failure, keystore paths from `apksigner` and `keytool`, bearer
 tokens, cloud provider keys, and private key blocks. It is a filter over known
 shapes, not a proof — see `tests/fixtures/log-redaction/README.md` for the
-corpus it is tested against, including the three cases that must *survive*
+corpus it is tested against, including the three cases that must _survive_
 redaction untouched.
 
 ### Reading a log back
