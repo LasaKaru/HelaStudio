@@ -3,6 +3,7 @@ using System;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Shellwright.Api.Data;
@@ -12,9 +13,11 @@ using Shellwright.Api.Data;
 namespace Shellwright.Api.Data.Migrations
 {
     [DbContext(typeof(ShellwrightDbContext))]
-    partial class ShellwrightDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902122416_BuildTables")]
+    partial class BuildTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

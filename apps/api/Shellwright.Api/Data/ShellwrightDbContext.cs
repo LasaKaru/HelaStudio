@@ -49,6 +49,18 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
     /// <summary>Remembered outcomes of requests that carried an idempotency key.</summary>
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
+    /// <summary>Builds.</summary>
+    public DbSet<Build> Builds => Set<Build>();
+
+    /// <summary>Append-only history of how each build got where it is.</summary>
+    public DbSet<BuildTransition> BuildTransitions => Set<BuildTransition>();
+
+    /// <summary>Reusable artifacts, found by the three cache keys.</summary>
+    public DbSet<ArtifactCacheEntry> ArtifactCache => Set<ArtifactCacheEntry>();
+
+    /// <summary>Metered builds.</summary>
+    public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,6 +125,105 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
                 .WithMany()
                 .HasForeignKey(x => x.CurrentConfigVersionId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<Build>(entity =>
+        {
+            entity.ToTable("builds");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.WorkflowId).HasMaxLength(200);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(255);
+            entity.Property(x => x.FailureCode).HasMaxLength(100);
+            entity.Property(x => x.FailureMessage).HasMaxLength(2000);
+            entity.Property(x => x.ArtifactReference).HasMaxLength(100);
+
+            // The listing query: this app's builds, newest first.
+            entity.HasIndex(x => new { x.AppId, x.CreatedAt }).IsDescending(false, true);
+
+            // ⚠️ Idempotence as an index, not as a read-then-write. Two
+            // identical requests racing each other both find nothing on a read
+            // and both start a build — which on a metered fleet is a customer
+            // billed twice for one click.
+            entity.HasIndex(x => new { x.AppId, x.IdempotencyKey })
+                .IsUnique()
+                .HasDatabaseName("ix_builds_idempotency");
+
+            // Finding the workflow to cancel.
+            entity.HasIndex(x => x.WorkflowId).IsUnique();
+
+            entity.HasOne(x => x.App).WithMany().HasForeignKey(x => x.AppId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Org>().WithMany().HasForeignKey(x => x.OrgId).OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict, not Cascade: the configuration a build was made from
+            // must outlive nothing in particular, but deleting it would leave a
+            // build nobody can explain. config_versions has no DELETE grant
+            // anyway, so this is belt and braces on something already refused.
+            entity.HasOne<ConfigVersion>()
+                .WithMany()
+                .HasForeignKey(x => x.ConfigVersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.RequestedBy).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BuildTransition>(entity =>
+        {
+            entity.ToTable("build_transitions");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.BuildId, x.OccurredAt });
+            entity.HasOne(x => x.Build).WithMany().HasForeignKey(x => x.BuildId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ArtifactCacheEntry>(entity =>
+        {
+            entity.ToTable("artifact_cache");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.CodeKey).HasMaxLength(64);
+            entity.Property(x => x.AssetKey).HasMaxLength(64);
+            entity.Property(x => x.ContentKey).HasMaxLength(64);
+            entity.Property(x => x.ArtifactReference).HasMaxLength(100);
+
+            // ⚠️ Unique on the app as well as the keys. Two apps with
+            // byte-identical configurations get separate rows: sharing an
+            // artifact across tenants would hand one customer's binary to
+            // another, and no amount of storage saved is worth that.
+            //
+            // Type is in the key because a debug-signed artifact must never
+            // satisfy a release build.
+            entity.HasIndex(x => new { x.AppId, x.Platform, x.Type, x.CodeKey, x.AssetKey, x.ContentKey })
+                .IsUnique()
+                .HasDatabaseName("ix_artifact_cache_keys");
+
+            // The patch fast path's lookup: everything for this app and
+            // platform whose code key matches.
+            entity.HasIndex(x => new { x.AppId, x.Platform, x.Type, x.CodeKey })
+                .HasDatabaseName("ix_artifact_cache_code_key");
+
+            entity.HasOne(x => x.App).WithMany().HasForeignKey(x => x.AppId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UsageRecord>(entity =>
+        {
+            entity.ToTable("usage_records");
+            entity.HasKey(x => x.Id);
+
+            // ⚠️ One row per build, and the index is what makes recording usage
+            // idempotent. The activity that writes it is retried on any
+            // transient failure, including one that happens after the row was
+            // committed, so a read-then-write would double-bill on a network
+            // blip.
+            entity.HasIndex(x => x.BuildId).IsUnique().HasDatabaseName("ix_usage_records_build");
+
+            // The billing query: one organisation's usage over a period.
+            entity.HasIndex(x => new { x.OrgId, x.CreatedAt });
+
+            entity.HasOne<Org>().WithMany().HasForeignKey(x => x.OrgId).OnDelete(DeleteBehavior.Cascade);
+
+            // ⚠️ NoAction, deliberately. Usage must outlive the build row it
+            // came from: a customer disputing an invoice six months later needs
+            // the charge to still exist, and a cascade would quietly erase the
+            // evidence along with a cleaned-up build.
+            entity.HasOne<Build>().WithMany().HasForeignKey(x => x.BuildId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<ConfigVersion>(entity =>
