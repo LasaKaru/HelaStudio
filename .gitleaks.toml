@@ -65,6 +65,16 @@ again.
 appconfig.json beside it is still scanned, and so is every fixture config it was
 generated from — a real credential in a fixture would still be caught twice.
 
+The log-redaction corpus is the same bargain in the other direction: it is a
+file of deliberately fake credentials, in every shape a build tool has been seen
+to print, and the redactor is tested against it. It has to look exactly like the
+real thing to be worth anything, which is precisely why the scanner objects.
+
+⚠️ One file, and the redaction tests deliberately read their credential shapes
+out of it rather than inlining them. Inlining one in a .cs file would mean
+allowlisting a source file — and a source file is where a real credential
+actually ends up.
+
 Scoped to exact paths on purpose. A directory-wide or extension-wide exclusion
 here would be the hole the next real leak walks through.
 """
@@ -77,4 +87,5 @@ paths = [
   '''^docs/reference/diagnostics\.md$''',
   '''^\.gitleaks\.toml$''',
   '''^tests/fixtures/generated/(?:[^/]+/)+files/\.shellwright/manifest\.json$''',
+  '''^tests/fixtures/log-redaction/leaky-output\.json$''',
 ]

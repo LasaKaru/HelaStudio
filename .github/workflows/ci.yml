@@ -153,10 +153,27 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      # The log pipeline's tests are tests of Redis's behaviour — batched adds,
+      # approximate stream trimming, resuming a read from a stream id. A fake
+      # would agree with whatever they asserted, including a wrong assertion.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       # scripts/dev-postgres.sh creates the two roles and the database against
       # this, instead of starting a cluster of its own.
       SHELLWRIGHT_PG_ADMIN: Host=127.0.0.1;Port=5432;Database=postgres;Username=postgres;Password=postgres
+
+      # Set, so RedisFixture uses the service container above rather than
+      # trying to install and start a server of its own on the runner.
+      SHELLWRIGHT_TEST_REDIS: 127.0.0.1:6379
 
     steps:
       - uses: actions/checkout@v4
