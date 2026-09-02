@@ -135,6 +135,39 @@ public static class ApiErrors
     public static ApiError NoConfiguration { get; } =
         new("API_NO_CONFIGURATION", StatusCodes.Status404NotFound, "No configuration");
 
+    /// <summary>
+    /// A creating request arrived without an <c>Idempotency-Key</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Required rather than optional on builds, unlike everywhere else in
+    /// this API. A retried save costs a duplicate row that the content address
+    /// collapses anyway; a retried build costs runner minutes somebody is
+    /// billed for. Making the client name the request is the only way the
+    /// server can tell "start another build" from "I did not hear you".
+    /// </remarks>
+    public static ApiError IdempotencyKeyRequired { get; } =
+        new("API_IDEMPOTENCY_KEY_REQUIRED", StatusCodes.Status400BadRequest, "Idempotency key required");
+
+    /// <summary>The organisation already has as many builds running as it may.</summary>
+    public static ApiError BuildConcurrencyExceeded { get; } =
+        new("API_BUILD_CONCURRENCY_EXCEEDED", StatusCodes.Status429TooManyRequests, "Too many builds running");
+
+    /// <summary>The build has already finished, so there is nothing to cancel.</summary>
+    public static ApiError BuildNotCancellable { get; } =
+        new("API_BUILD_NOT_CANCELLABLE", StatusCodes.Status409Conflict, "Build already finished");
+
+    /// <summary>The build produced no artifact to download.</summary>
+    public static ApiError NoArtifact { get; } =
+        new("API_NO_ARTIFACT", StatusCodes.Status404NotFound, "No artifact");
+
+    /// <summary>The download link is expired or was not issued by this server.</summary>
+    public static ApiError InvalidDownloadLink { get; } =
+        new("API_INVALID_DOWNLOAD_LINK", StatusCodes.Status403Forbidden, "Link is not valid");
+
+    /// <summary>The app has been archived and cannot be built.</summary>
+    public static ApiError AppArchived { get; } =
+        new("API_APP_ARCHIVED", StatusCodes.Status409Conflict, "App is archived");
+
     /// <summary>Demoting this member would leave the organisation with no owner.</summary>
     public static ApiError LastOwner { get; } =
         new("API_LAST_OWNER", StatusCodes.Status409Conflict, "Last owner");
@@ -163,6 +196,12 @@ public static class ApiErrors
         NameTaken,
         ConfigInvalid,
         NoConfiguration,
+        IdempotencyKeyRequired,
+        BuildConcurrencyExceeded,
+        BuildNotCancellable,
+        NoArtifact,
+        InvalidDownloadLink,
+        AppArchived,
         LastOwner,
         Internal,
     ];

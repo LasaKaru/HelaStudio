@@ -85,6 +85,14 @@ public sealed class EndpointAuthorizationTests(PostgresFixture fixture) : IDispo
             "POST /v1/auth/password/reset",
             "GET /v1/auth/oauth/{provider}",
             "GET /v1/auth/oauth/{provider}/complete",
+
+            // ⚠️ The signature in the query string is the credential here.
+            // Deliberate, because an artifact is fetched by a browser, a curl
+            // in somebody's CI, or an emulator — none of which reliably carries
+            // a bearer token, and all of which log the URL. A signed link that
+            // names one build and one artifact and dies in fifteen minutes is a
+            // narrower grant than an access token that opens the whole API.
+            "GET /v1/apps/{appId:guid}/builds/{buildId:guid}/artifact/download",
         };
 
         var anonymous = Endpoints()

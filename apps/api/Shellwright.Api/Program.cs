@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.RateLimiting;
 using Shellwright.Api.Auth;
 using Shellwright.Api.Authorization;
+using Shellwright.Api.Builds;
 using Shellwright.Api.Config;
 using Shellwright.Api.Data;
 using Shellwright.Api.Endpoints;
@@ -26,6 +27,7 @@ builder.Services.AddShellwrightData(builder.Configuration);
 builder.Services.AddShellwrightAuth(builder.Configuration);
 builder.Services.AddShellwrightAuthorization();
 builder.Services.AddShellwrightConfig(builder.Configuration);
+builder.Services.AddShellwrightBuilds(builder.Configuration);
 builder.Services.AddShellwrightTelemetry(builder.Configuration);
 builder.Services.AddShellwrightRateLimiting(builder.Configuration);
 builder.Services.AddShellwrightProblemDetails();
@@ -67,6 +69,7 @@ app.MapApiTokenEndpoints();
 app.MapAppEndpoints();
 app.MapConfigEndpoints();
 app.MapAssetEndpoints();
+app.MapBuildEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
 

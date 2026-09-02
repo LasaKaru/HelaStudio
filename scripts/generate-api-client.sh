@@ -21,6 +21,7 @@ cd "$root"
 export Auth__SigningKey="${Auth__SigningKey:-$(head -c 32 /dev/urandom | base64)}"
 export Database__ConnectionString="${Database__ConnectionString:-Host=localhost;Database=unused}"
 export AssetStorage__Directory="${AssetStorage__Directory:-/tmp/shellwright-openapi}"
+export ArtifactStorage__Directory="${ArtifactStorage__Directory:-/tmp/shellwright-openapi}"
 export Logging__LogLevel__Default=Warning
 
 dotnet run --project apps/api/Shellwright.Api -- \

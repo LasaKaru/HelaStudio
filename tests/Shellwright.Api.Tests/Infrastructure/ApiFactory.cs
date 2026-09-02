@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using Shellwright.Api.Builds;
 using Shellwright.Api.Email;
+using Temporalio.Client;
 
 namespace Shellwright.Api.Tests.Infrastructure;
 
@@ -31,6 +33,22 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
     public string AssetDirectory { get; } =
         Path.Combine(Path.GetTempPath(), "shellwright-assets", Guid.NewGuid().ToString("N"));
 
+    /// <summary>Where build artifacts land for this factory's lifetime.</summary>
+    public string ArtifactDirectory { get; } =
+        Path.Combine(Path.GetTempPath(), "shellwright-artifacts", Guid.NewGuid().ToString("N"));
+
+    /// <summary>Records what the API asked Temporal to do, instead of doing it.</summary>
+    /// <remarks>
+    /// ⚠️ Substituted rather than pointed at a real Temporal, unlike the
+    /// orchestrator's tests. What the API is responsible for is deciding
+    /// <i>whether</i> to start a workflow — the idempotency key, the
+    /// concurrency limit, the authorisation — and none of that becomes truer
+    /// for having a real server behind it. Whether the workflow then runs is
+    /// the orchestrator's business, and BuildWorkflowTests uses a real Temporal
+    /// to check it.
+    /// </remarks>
+    public RecordingWorkflowClient Workflows { get; } = new();
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -48,6 +66,7 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
         builder.UseSetting("Build:Toolchain:agp", "8.9");
         builder.UseSetting("Build:Toolchain:xcode", "26.1");
         builder.UseSetting("AssetStorage:Directory", AssetDirectory);
+        builder.UseSetting("ArtifactStorage:Directory", ArtifactDirectory);
 
         builder.ConfigureServices(services =>
         {
@@ -56,6 +75,14 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Email);
+
+            // ⚠️ Removed, not merely overridden. The real registration connects
+            // to Temporal eagerly when it is first resolved, so leaving it in
+            // place would make every test that starts a build hang until a
+            // connection attempt times out.
+            services.RemoveAll<IBuildWorkflowClient>();
+            services.RemoveAll<ITemporalClient>();
+            services.AddSingleton<IBuildWorkflowClient>(Workflows);
         });
     }
 
@@ -67,6 +94,11 @@ public sealed class ApiFactory(PostgresFixture fixture) : WebApplicationFactory<
         if (disposing && Directory.Exists(AssetDirectory))
         {
             Directory.Delete(AssetDirectory, recursive: true);
+        }
+
+        if (disposing && Directory.Exists(ArtifactDirectory))
+        {
+            Directory.Delete(ArtifactDirectory, recursive: true);
         }
     }
 

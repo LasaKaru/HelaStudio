@@ -67,3 +67,62 @@ Two things to do afterwards:
 
 Hand-written migrations keep their SQL in `Data/Sql/*.sql` so that policies and
 grants are reviewed as SQL rather than as a C# string literal.
+
+## Builds
+
+`POST /v1/apps/{appId}/builds` starts one. Six endpoints in total: start, list,
+read, cancel, get a download link, and follow that link.
+
+### The Idempotency-Key is required here
+
+Everywhere else in this API the header is optional. On builds it is mandatory,
+and a request without one is refused with `API_IDEMPOTENCY_KEY_REQUIRED`.
+
+A retried configuration save costs a duplicate row that the content address
+collapses anyway. A retried build costs runner minutes somebody is billed for,
+and the server has no other way to tell "start another build" from "I did not
+hear you". Refusing the request is friendlier than the alternative, which is a
+duplicate charge nobody notices until the invoice.
+
+Idempotence is a unique index on `(app_id, idempotency_key)`, not a
+read-then-write: two identical requests racing each other both find nothing on a
+read, and only the index stops both from inserting.
+
+### Concurrency is per organisation
+
+`Builds:MaxConcurrentBuildsPerOrg` defaults to two — enough for Android and iOS
+together, few enough that a misconfigured pipeline cannot queue a hundred. It is
+per organisation rather than global because the failure being prevented is one
+customer's CI loop consuming the fleet; a global cap would allow exactly that
+and only tell everybody else the service is slow.
+
+### Cancelling does not write "cancelled"
+
+`POST .../cancel` asks Temporal to stop the workflow and returns the build
+unchanged. The transition to `Cancelled` is recorded by the activity that runs
+when the workflow actually stops. Writing it optimistically would let the row
+say "stopped" while a runner kept burning metered minutes.
+
+Cancelling a build that has already finished is a `409`, not a silent `200` — it
+is nearly always a mistake about which build is which, and answering "fine"
+leaves the caller believing they stopped something.
+
+### Artifact downloads are signed links, not authenticated requests
+
+`GET .../artifact` returns a URL valid for fifteen minutes. The signature covers
+the build, the artifact reference and the expiry together, so a link issued for
+one build cannot be replayed against another that produced identical bytes —
+which, with a content-addressed store, is exactly what a cache hit produces.
+
+The download endpoint itself is anonymous. That is deliberate: an artifact is
+fetched by a browser, a `curl` in somebody's CI, or an emulator, none of which
+reliably carries a bearer token and all of which log the URL. A signed link
+naming one build and dying in fifteen minutes is a narrower grant than an access
+token that opens the whole API.
+
+Being anonymous, it has no identity to stamp, so row-level security hides every
+row from it. Rather than give the API a policy-bypassing connection — which
+every other handler in the process could then reach — there is one
+`SECURITY DEFINER` function, `app_artifact_for_download`, that answers exactly
+that question and returns three columns. `Data/Sql/ArtifactDownload.up.sql` sets
+out why the alternatives were rejected.
