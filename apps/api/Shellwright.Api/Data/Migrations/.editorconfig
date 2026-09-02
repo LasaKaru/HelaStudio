@@ -28,3 +28,5 @@ dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.IDE0300.severity = none
 dotnet_diagnostic.IDE0301.severity = none
 dotnet_diagnostic.IDE0028.severity = none
+# The scaffolder's `new bool[0]` for a single-column descending index.
+dotnet_diagnostic.CA1825.severity = none

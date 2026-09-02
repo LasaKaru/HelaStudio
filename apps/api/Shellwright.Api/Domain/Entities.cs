@@ -49,6 +49,20 @@ public sealed class User
     /// <summary>Creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>
+    /// Consecutive failed sign-in attempts, reset by a success.
+    /// </summary>
+    /// <remarks>
+    /// Kept on the row rather than in a cache so that the backoff survives a
+    /// restart and is shared by every instance. The cost is a write on an
+    /// unauthenticated path, which is why the per-IP limiter sits in front of
+    /// it rather than beside it.
+    /// </remarks>
+    public int FailedLoginCount { get; set; }
+
+    /// <summary>When the account stops refusing sign-ins, if it currently is.</summary>
+    public DateTimeOffset? LockedUntil { get; set; }
+
     /// <summary>Organisations this user belongs to.</summary>
     public ICollection<OrgMember> Memberships { get; } = [];
 }

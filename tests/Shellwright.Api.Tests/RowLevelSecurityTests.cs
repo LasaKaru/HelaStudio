@@ -263,11 +263,27 @@ public sealed class RowLevelSecurityTests(PostgresFixture fixture)
     [Fact]
     public async Task Every_table_is_policed_or_explicitly_exempt()
     {
-        // Identity is global rather than tenant-scoped: one account belongs to
-        // many organisations, so there is no tenant to isolate it to. The API
-        // never returns a row here for anyone but the caller, and the
-        // application role has no DELETE on it.
-        var exempt = new HashSet<string>(StringComparer.Ordinal) { "users", "__migrations" };
+        // Every exemption is a decision with a reason, not a list that grew.
+        //
+        // All five are credential or identity tables, and none of them is
+        // tenant-scoped: an account, a session, and a reset link belong to a
+        // person, who may be a member of several organisations or of none. A
+        // membership predicate over them would not be stricter, it would be
+        // meaningless — there is no tenant to compare against.
+        //
+        // What protects them instead is narrower than a policy: refresh_tokens,
+        // user_tokens and oauth_identities are only ever reached by an indexed
+        // lookup on a 256-bit secret the caller had to already possess, and
+        // there is no endpoint that lists them. api_tokens *is* org-scoped and
+        // does carry a policy, which is the contrast worth noticing.
+        var exempt = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "users",
+            "refresh_tokens",
+            "user_tokens",
+            "oauth_identities",
+            "__migrations",
+        };
 
         var connection = await fixture.OpenAsOwnerAsync();
         await using (connection.ConfigureAwait(false))

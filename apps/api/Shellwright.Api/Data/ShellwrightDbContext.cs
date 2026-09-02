@@ -31,6 +31,21 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
     /// <summary>Audit trail.</summary>
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
+    /// <summary>Refresh-token rotation families.</summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    /// <summary>Long-lived credentials for CI and the command line.</summary>
+    public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+
+    /// <summary>Single-use tokens delivered by email.</summary>
+    public DbSet<UserToken> UserTokens => Set<UserToken>();
+
+    /// <summary>Links to external identity providers.</summary>
+    public DbSet<OAuthIdentity> OAuthIdentities => Set<OAuthIdentity>();
+
+    /// <summary>Write-only security log.</summary>
+    public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -151,6 +166,69 @@ public sealed class ShellwrightDbContext(DbContextOptions<ShellwrightDbContext> 
             // cascade would remove, and it is the one most likely to be asked
             // for. The org_id is an identifier here, not a reference.
             entity.HasIndex(x => x.ActorId);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("refresh_tokens");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TokenHash).HasMaxLength(64);
+
+            // Presentation is a lookup by hash: the secret has 256 bits of
+            // entropy, so an exact index match is both safe and constant-time
+            // in the only sense that matters here.
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => x.FamilyId);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ApiToken>(entity =>
+        {
+            entity.ToTable("api_tokens");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Prefix).HasMaxLength(20);
+            entity.Property(x => x.TokenHash).HasMaxLength(64);
+            entity.Property(x => x.Role).HasConversion<string>().HasMaxLength(16);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => x.OrgId);
+            entity.HasOne<Org>().WithMany().HasForeignKey(x => x.OrgId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Workspace>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserToken>(entity =>
+        {
+            entity.ToTable("user_tokens");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TokenHash).HasMaxLength(64);
+            entity.Property(x => x.Purpose).HasConversion<string>().HasMaxLength(24);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.Purpose });
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OAuthIdentity>(entity =>
+        {
+            entity.ToTable("oauth_identities");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Provider).HasMaxLength(32);
+            entity.Property(x => x.ProviderUserId).HasMaxLength(128);
+            entity.HasIndex(x => new { x.Provider, x.ProviderUserId }).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SecurityEvent>(entity =>
+        {
+            entity.ToTable("security_events");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Kind).HasMaxLength(64);
+            entity.Property(x => x.Detail).HasMaxLength(500);
+            entity.HasIndex(x => x.At).IsDescending();
+
+            // ⚠️ No foreign key to users. The log has to survive the account it
+            // describes, and "this user was deleted" is itself an event worth
+            // keeping the surrounding entries for.
         });
 
         ApplySnakeCaseNames(modelBuilder);
