@@ -56,6 +56,9 @@ export const DiagnosticCode = {
 
   // ── Secrets ────────────────────────────────────────────────────────────
   SecretInConfig: 'CFG_SECRET_IN_CONFIG',
+
+  // ── Text ───────────────────────────────────────────────────────────────
+  ControlCharacter: 'CFG_CONTROL_CHARACTER',
 } as const;
 
 /** One of the stable diagnostic codes. */

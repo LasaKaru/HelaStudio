@@ -79,6 +79,7 @@ public sealed class ConfigValidator
         new IconDimensionsRule(),
         new IconAlphaRule(),
         new NoSecretsRule(),
+        new NoControlCharactersRule(),
     ];
 
     /// <summary>The <c>appconfig.json</c> v1 JSON Schema, as a mutable document.</summary>

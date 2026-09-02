@@ -105,6 +105,27 @@
     "warnings": [],
     "info": []
   },
+  "invalid-CFG_CONTROL_CHARACTER.json": {
+    "valid": false,
+    "errors": [
+      {
+        "code": "CFG_CONTROL_CHARACTER",
+        "severity": "error",
+        "path": "/app/name",
+        "message": "This value contains U+0000, an unprintable control character. It is almost always an accident of copying and pasting, it cannot be stored, and it would appear verbatim in your store listing. Retype the value rather than pasting it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_control_character"
+      },
+      {
+        "code": "CFG_CONTROL_CHARACTER",
+        "severity": "error",
+        "path": "/navigation/drawer/items/1/label",
+        "message": "This value contains U+000B, an unprintable control character. It is almost always an accident of copying and pasting, it cannot be stored, and it would appear verbatim in your store listing. Retype the value rather than pasting it.",
+        "docsUrl": "https://docs.shellwright.dev/reference/diagnostics#cfg_control_character"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
   "invalid-CFG_DUPLICATE_ITEM_ID.json": {
     "valid": false,
     "errors": [

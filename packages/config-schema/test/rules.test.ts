@@ -17,6 +17,7 @@ import {
   pluginPlatformFloorRule,
 } from '../src/rules/plugin-rules.js';
 import { noSecretsRule } from '../src/rules/secret-rules.js';
+import { noControlCharactersRule } from '../src/rules/text-rules.js';
 import {
   duplicateIdRule,
   nativeFeaturesRule,
@@ -338,5 +339,51 @@ describe('secret rules', () => {
   it('accepts ordinary header values', () => {
     const config = { webOverrides: { headers: { 'X-Client': 'mobile-app' } } };
     expect(noSecretsRule.run(ctx(config as JsonObject))).toEqual([]);
+  });
+});
+
+describe('noControlCharactersRule', () => {
+  it.each([
+    ['a NUL, which jsonb cannot store at all', '\u0000'],
+    ['a vertical tab', '\u000b'],
+    ['a form feed', '\u000c'],
+    ['an escape', '\u001b'],
+    ['a delete', '\u007f'],
+    ['a C1 control', '\u0085'],
+  ])('rejects %s', (_label, character) => {
+    const config = { app: { name: `Acme${character}Orders` } };
+    const found = noControlCharactersRule.run(ctx(config as JsonObject));
+
+    expect(found[0]?.code).toBe(DiagnosticCode.ControlCharacter);
+    expect(found[0]?.path).toBe('/app/name');
+  });
+
+  it.each([
+    ['a tab', '\t'],
+    ['a newline', '\n'],
+    ['a carriage return', '\r'],
+  ])('allows %s, which is legitimate in multi-line text', (_label, character) => {
+    const config = { app: { name: `Acme${character}Orders` } };
+    expect(noControlCharactersRule.run(ctx(config as JsonObject))).toEqual([]);
+  });
+
+  it('allows ordinary text, including emoji and combining marks', () => {
+    const config = {
+      app: { name: 'Café ☕' },
+      navigation: { drawer: { items: [{ label: 'Ünïcødé' }] } },
+    };
+    expect(noControlCharactersRule.run(ctx(config as JsonObject))).toEqual([]);
+  });
+
+  it('reports once per offending string rather than once per character', () => {
+    const config = { app: { name: `A\u0000B\u0001C` } };
+    expect(noControlCharactersRule.run(ctx(config as JsonObject))).toHaveLength(1);
+  });
+
+  it('finds them at any depth', () => {
+    const config = { linkRules: [{ id: 'a' }, { id: `b\u0007` }] };
+    const found = noControlCharactersRule.run(ctx(config as JsonObject));
+
+    expect(found[0]?.path).toBe('/linkRules/1/id');
   });
 });

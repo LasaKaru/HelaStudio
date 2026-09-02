@@ -10,6 +10,7 @@ import {
   pluginPlatformFloorRule,
 } from './plugin-rules.js';
 import { noSecretsRule } from './secret-rules.js';
+import { noControlCharactersRule } from './text-rules.js';
 import {
   duplicateIdRule,
   nativeFeaturesRule,
@@ -47,4 +48,5 @@ export const defaultRules: readonly ValidationRule[] = [
   iconDimensionsRule,
   iconAlphaRule,
   noSecretsRule,
+  noControlCharactersRule,
 ];

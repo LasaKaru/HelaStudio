@@ -79,6 +79,19 @@ This file is generated from `packages/config-schema/src/diagnostics.ts`.
 | ------------------------------------------------------- | -------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | <a id="cfg_secret_in_config"></a>`CFG_SECRET_IN_CONFIG` | error    | A value looks like a credential. | Configuration is embedded in the shipped app where anyone can read it. Store the credential separately and reference it by id. |
 
+## Text
+
+| Code                                                      | Severity | What it means                                       | What to do                                                                                                                                 |
+| --------------------------------------------------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| <a id="cfg_control_character"></a>`CFG_CONTROL_CHARACTER` | error    | A string contains an unprintable control character. | Retype the value rather than pasting it. Tab, newline, and carriage return are allowed; the rest are almost always an artefact of copying. |
+
+U+0000 in particular cannot be stored at all — PostgreSQL's `jsonb` type has no
+representation for it — so without this rule a configuration carrying one passes
+the schema, passes every rule, and then fails the save with an error that names
+nothing the author can act on. The remaining C0 controls store perfectly well
+and go on to appear verbatim in an Android string resource, an `Info.plist`, and
+a store listing.
+
 ## Migration failures
 
 `ConfigMigrator` raises `CFG_SCHEMA_VERSION_UNSUPPORTED` when a stored

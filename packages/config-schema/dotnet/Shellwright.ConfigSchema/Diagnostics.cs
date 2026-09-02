@@ -99,6 +99,9 @@ public static class DiagnosticCode
 
     /// <summary>A credential appears in the configuration.</summary>
     public const string SecretInConfig = "CFG_SECRET_IN_CONFIG";
+
+    /// <summary>A string carries an unprintable control character.</summary>
+    public const string ControlCharacter = "CFG_CONTROL_CHARACTER";
 }
 
 /// <summary>A single finding about a configuration document.</summary>
