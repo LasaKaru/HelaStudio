@@ -115,19 +115,45 @@ public sealed class BuildWorkflowTests(TemporalFixture temporal)
         activities.Usage[0].RunnerSeconds.Should().Be(0);
     }
 
-    /// <summary>A patchable hit still runs the build, and reports itself as a hit.</summary>
+    /// <summary>
+    /// A patchable hit still goes through the build activity, and counts as a hit.
+    /// </summary>
+    /// <remarks>
+    /// The workflow does not know a patch from a compile — that choice belongs
+    /// to the activity, where the artifact and the toolchain are. What the
+    /// workflow must not do is take the <see cref="CacheOutcome.Complete"/>
+    /// short circuit for an outcome that still has work to do.
+    /// </remarks>
     [Fact]
     public async Task A_patchable_cache_hit_still_builds_but_counts_as_a_hit()
     {
         var activities = new FakeActivities
         {
-            Cache = new CacheLookup(CacheOutcome.Patchable, "artifact://sha256-old", 4321),
+            Cache = new CacheLookup(CacheOutcome.Patch, "artifact://sha256-old", 4321),
         };
 
         var result = await RunAsync(activities);
 
         result.State.Should().Be(BuildState.Succeeded);
         result.CacheHit.Should().BeTrue();
+        activities.Calls.Should().Contain(nameof(FakeActivities.BuildAsync));
+    }
+
+    /// <summary>A warm hit is a full build, and the workflow treats it as one.</summary>
+    [Fact]
+    public async Task A_warm_cache_hit_runs_the_full_build()
+    {
+        var activities = new FakeActivities
+        {
+            // ⚠️ No artifact reference, which is the point: the code key
+            // matched, so the app's dependency cache is warm, but nothing about
+            // the previous artifact can be reused.
+            Cache = new CacheLookup(CacheOutcome.Warm, null, 0),
+        };
+
+        var result = await RunAsync(activities);
+
+        result.State.Should().Be(BuildState.Succeeded);
         activities.Calls.Should().Contain(nameof(FakeActivities.BuildAsync));
     }
 

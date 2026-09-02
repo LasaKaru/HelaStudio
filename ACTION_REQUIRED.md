@@ -294,6 +294,43 @@ failure worth making impossible to miss.
 Resend's free tier is 3,000 messages a month. Set `Email__ApiKey` and
 `Email__From` on a domain verified with them.
 
+### 19. Provide an Android debug keystore, and decide about release signing
+
+The build and patch paths both sign what they produce, and signing needs a
+keystore on the runner. Two very different things are needed here and they
+should not be confused.
+
+**Now, and easy:** a debug keystore for the runner image. The Android debug key
+is not a secret — it is the same well-known key on every developer machine, and
+apps signed with it cannot be published. Generate one into the runner image and
+set `Signing__KeystorePath`, `Signing__KeyAlias`, and the two password files.
+Until this exists, Android builds produce an APK that is assembled but not
+signed, and the verifier rejects it — deliberately, because an unsigned APK
+cannot be installed and shipping one silently is worse than failing the build.
+
+**Later, and not to be arrived at by accident:** release signing means holding
+customers' upload keys. That is the custody problem in §18.2 of the
+specification — a breach there is company-ending — and it needs the Vault
+design, per-tenant encryption, and audited access before a single key is
+accepted. Nothing in Sprint 07 does release signing, and the code path is
+deliberately not one flag away from it.
+
+If Play App Signing is used, the blast radius is much smaller: Google holds the
+app signing key and Shellwright only ever touches the upload key. That choice
+should be made before any customer key is accepted, not after.
+
+### 20. Stand up storage for build artifacts
+
+`FileSystemArtifactStore` writes finished APKs into a directory, content
+addressed by SHA-256. This is the same gap as asset blob storage (item 12) and
+has the same answer — Cloudflare R2 — but a different urgency: an artifact is
+tens of megabytes rather than tens of kilobytes, and a single host's disk is
+the current bound on how many builds can be kept.
+
+Set `ArtifactStorage__Directory` somewhere with room, and decide a retention
+policy. There is no expiry today: artifacts accumulate until the disk fills,
+and the first symptom is builds failing for an unrelated-looking reason.
+
 ---
 
 ## Running cost

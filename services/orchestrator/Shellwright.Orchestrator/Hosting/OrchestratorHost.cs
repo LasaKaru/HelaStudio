@@ -1,10 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shellwright.Orchestrator.Activities;
+using Shellwright.Orchestrator.Artifacts;
 using Shellwright.Orchestrator.Logs;
+using Shellwright.Orchestrator.Patching;
+using Shellwright.Orchestrator.Runner;
+using Shellwright.Orchestrator.Verification;
 using Shellwright.Orchestrator.Workflows;
 using StackExchange.Redis;
 using Temporalio.Extensions.Hosting;
@@ -70,6 +75,50 @@ public static class OrchestratorHostExtensions
             .AddWorkflow<BuildWorkflow>();
 
         services.AddShellwrightBuildLogs(configuration);
+        services.AddShellwrightRunner(configuration);
+
+        return services;
+    }
+
+    /// <summary>Adds the runner pool, artifact storage, patching, and verification.</summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    /// <remarks>
+    /// ⚠️ <c>IBuildSandbox</c> is deliberately not registered here. There
+    /// are two implementations with very different security properties, and
+    /// choosing between them by configuration is how a deployment ends up
+    /// running customer configurations on the host without anybody deciding to.
+    /// The composition root picks one, in the open.
+    /// </remarks>
+    public static IServiceCollection AddShellwrightRunner(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddOptions<RunnerPoolOptions>()
+            .Bind(configuration.GetSection(RunnerPoolOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<ArtifactStorageOptions>()
+            .Bind(configuration.GetSection(ArtifactStorageOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<VerificationOptions>()
+            .Bind(configuration.GetSection(VerificationOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.TryAddSingleton(TimeProvider.System);
+
+        services.AddSingleton<IRunnerPool, LocalRunnerPool>();
+        services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();
+        services.AddSingleton<IArtifactVerifier, AndroidArtifactVerifier>();
+        services.AddSingleton<IArtifactPatcher, AndroidContentPatcher>();
 
         return services;
     }

@@ -136,7 +136,7 @@ public sealed class FakeActivities
             token.ThrowIfCancellationRequested();
         }
 
-        return new BuiltArtifact("/workspace/app.apk", 42, cached.Kind == CacheOutcome.Patchable);
+        return new BuiltArtifact("/workspace/app.apk", 42, cached.Kind == CacheOutcome.Patch);
     }
 
     /// <summary>Stands in for verification.</summary>

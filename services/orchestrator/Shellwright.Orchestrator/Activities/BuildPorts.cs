@@ -65,6 +65,22 @@ public interface IArtifactStore
         BuildRequest request,
         string artifactPath,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Copies a stored artifact back onto a runner.</summary>
+    /// <param name="artifactReference">What <see cref="StoreAsync"/> returned.</param>
+    /// <param name="destinationPath">Where to put it.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>How many bytes were written.</returns>
+    /// <remarks>
+    /// ⚠️ To a path, not to a byte array. A release APK is tens of megabytes
+    /// and several builds run at once; returning one as a <c>byte[]</c> is a
+    /// managed allocation on the large object heap per concurrent build, which
+    /// is how the orchestrator is killed by the OOM killer.
+    /// </remarks>
+    Task<long> FetchAsync(
+        string artifactReference,
+        string destinationPath,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Streams build output live and archives it durably.</summary>

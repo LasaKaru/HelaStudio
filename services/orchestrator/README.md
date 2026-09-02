@@ -65,3 +65,47 @@ lines and the id to resume from. A viewer that reconnects passes back the last
 id it saw; an empty page hands the same position back rather than rewinding to
 the beginning. Reads are paged rather than blocking, because a blocking read per
 viewer is a Redis connection per viewer and the managed tiers count connections.
+
+## The build cache
+
+The cache key is split three ways, because a change to a colour and a change to
+a permission cost wildly different amounts to act on. Each outcome names a
+different amount of work, and the names are held to what the code does — an
+outcome claiming a patch that then runs a four-minute compile is worse than no
+cache, because metering, queue estimates and the customer's bill are all
+computed from it.
+
+| Outcome    | What matched        | What runs                                      |
+| ---------- | ------------------- | ---------------------------------------------- |
+| `Miss`     | nothing             | full build, cold dependency cache              |
+| `Warm`     | code key            | full build, warm dependency cache              |
+| `Patch`    | code and asset keys | swap one file, re-align, re-sign — no compiler |
+| `Complete` | all three           | nothing; the previous artifact is the answer   |
+
+`Warm` is a full toolchain run and is a separate value only so metering can tell
+a warm build from a cold one. Anything in the asset key — an icon, a colour, a
+tab label — is a _compiled_ Android resource, and replacing one means
+recompiling `resources.arsc` and relinking.
+
+`Patch` is the case the split exists for. Everything in the content key — the
+start URL, allowed origins, navigation, link rules, the version string — is read
+at run time from one uncompiled JSON file inside the APK. `AndroidContentPatcher`
+replaces that entry, drops the old signature (including `MANIFEST.MF`, which
+digests every entry), then re-aligns and re-signs. If the cached artifact turns
+out not to be shaped for that, the patcher raises `PatchNotPossibleException`
+and the activity falls through to a full build: slower, never wrong. A signing
+tool that _fails_ is not recovered from — a fleet that cannot sign must not hide
+behind builds that merely take longer.
+
+## Verification
+
+Nothing reaches a customer unchecked. `AndroidArtifactVerifier` rejects an
+artifact that is missing, implausibly small, over Google Play's size limit, not
+a readable archive, missing its manifest, missing compiled code, missing its
+configuration, or unsigned. Every one of those corresponds to a way a build
+exits zero and produces something broken — the configuration check in
+particular, because an app that installs, launches and shows nothing gets blamed
+on the customer's website rather than on the build.
+
+It is a structural check, not a cryptographic one: `apksigner verify` runs on
+the runner where the signing tools are.

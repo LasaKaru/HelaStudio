@@ -12,36 +12,73 @@ public sealed record BuildHashes(string CodeKey, string AssetKey, string Content
 /// <param name="Hashes">The cache keys, computed from the resolved document.</param>
 public sealed record ValidationOutcome(bool IsValid, string Detail, BuildHashes Hashes);
 
-/// <summary>How much of a previous build can be reused.</summary>
+/// <summary>
+/// How much of a previous build can be reused.
+/// </summary>
+/// <remarks>
+/// ⚠️ Each value names a different amount of work, and the names are held to
+/// what the code actually does. An outcome that claims a patch and then runs a
+/// four-minute compile is worse than no cache at all: it reports a cost nobody
+/// paid, and the metering, the queue estimates and the customer's bill are all
+/// computed from it.
+/// </remarks>
 public enum CacheOutcome
 {
-    /// <summary>Nothing matched. A full build.</summary>
+    /// <summary>Nothing matched. A full build, from a cold dependency cache.</summary>
     Miss = 0,
 
     /// <summary>
-    /// The code key matched but assets or content did not.
+    /// The code key matched, but the assets did not.
     /// </summary>
     /// <remarks>
-    /// ⚠️ The unit-economics case, and the reason the cache key is split three
-    /// ways at all. Nothing that affects compiled code has changed, so the
-    /// cached artifact can have its resources replaced and be re-signed in
-    /// under a minute instead of recompiled in four. Most user-triggered builds
-    /// land here: people change a colour, a label, a start page.
+    /// ⚠️ Still a full toolchain run. Anything in the asset key — an icon, a
+    /// colour, a tab label — is a <i>compiled</i> Android resource, and
+    /// replacing one means recompiling <c>resources.arsc</c> and relinking. The
+    /// saving here is real but indirect: the app's dependency cache is warm, so
+    /// Gradle resolves nothing over the network.
+    ///
+    /// This is a distinct value from <see cref="Miss"/> only because metering
+    /// and queue estimates need to tell a warm build from a cold one.
     /// </remarks>
-    Patchable = 1,
+    Warm = 1,
+
+    /// <summary>
+    /// The code and asset keys both matched. Only content changed.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The unit-economics case, and the reason the key is split three ways at
+    /// all. Everything in the content key — the start URL, the allowed origins,
+    /// navigation structure, link rules, the version string — is read at run
+    /// time out of one uncompiled JSON file in the APK's assets. Nothing
+    /// compiled has changed, so the cached artifact has that one file replaced
+    /// and is re-signed, in seconds rather than minutes. No toolchain runs.
+    ///
+    /// A great many user-triggered builds land here: people change a start
+    /// page, add an allowed origin, bump a version.
+    /// </remarks>
+    Patch = 2,
 
     /// <summary>All three matched. The previous artifact is the answer.</summary>
-    Complete = 2,
+    Complete = 3,
 }
 
 /// <summary>What the cache lookup found.</summary>
 /// <param name="Kind">How much can be reused.</param>
-/// <param name="ArtifactReference">The cached artifact, when there is one.</param>
+/// <param name="ArtifactReference">
+/// The cached artifact, when there is one. Present for
+/// <see cref="CacheOutcome.Patch"/> and <see cref="CacheOutcome.Complete"/>,
+/// and for <see cref="CacheOutcome.Warm"/> it is null: there is a previous
+/// artifact, but nothing about it can be reused.
+/// </param>
 /// <param name="ArtifactBytes">Its size, for metering.</param>
 public sealed record CacheLookup(CacheOutcome Kind, string? ArtifactReference, long ArtifactBytes)
 {
     /// <summary>Nothing to reuse.</summary>
     public static CacheLookup Miss { get; } = new(CacheOutcome.Miss, null, 0);
+
+    /// <summary>Whether this outcome carries an artifact that can be reused as bytes.</summary>
+    public bool HasReusableArtifact =>
+        Kind is (CacheOutcome.Patch or CacheOutcome.Complete) && ArtifactReference is not null;
 }
 
 /// <summary>A leased runner slot.</summary>

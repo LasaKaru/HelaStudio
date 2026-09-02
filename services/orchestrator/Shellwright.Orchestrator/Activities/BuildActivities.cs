@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Shellwright.ConfigSchema;
+using Shellwright.Orchestrator.Patching;
 using Shellwright.Orchestrator.Sandbox;
 using Shellwright.Orchestrator.Workflows;
 using Temporalio.Activities;
@@ -20,6 +21,7 @@ namespace Shellwright.Orchestrator.Activities;
 /// <param name="sandbox">Runs the toolchain in isolation.</param>
 /// <param name="generator">Turns a configuration into a project.</param>
 /// <param name="verifier">Checks what the toolchain produced.</param>
+/// <param name="patcher">Rebuilds a cached artifact when only content changed.</param>
 /// <param name="artifacts">Stores the finished artifact.</param>
 /// <param name="logs">Streams and archives build output.</param>
 /// <param name="hashContext">Deployment facts that feed the cache key.</param>
@@ -30,6 +32,7 @@ public sealed class BuildActivities(
     IBuildSandbox sandbox,
     IProjectGenerator generator,
     IArtifactVerifier verifier,
+    IArtifactPatcher patcher,
     IArtifactStore artifacts,
     IBuildLogPipeline logs,
     HashContext hashContext)
@@ -173,6 +176,17 @@ public sealed class BuildActivities(
 
         var context = ActivityExecutionContext.Current;
         var token = context.CancellationToken;
+
+        if (cached.Kind == CacheOutcome.Patch && patcher.Supports(request.Platform))
+        {
+            var patched = await TryPatchAsync(request, lease, cached, token);
+
+            if (patched is not null)
+            {
+                return patched;
+            }
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
         var command = BuildCommands.For(request, project);
@@ -206,7 +220,65 @@ public sealed class BuildActivities(
         return new BuiltArtifact(
             artifactPath,
             (int)Math.Ceiling(result.Duration.TotalSeconds),
-            cached.Kind == CacheOutcome.Patchable);
+
+            // ⚠️ False, unconditionally, and that is the point. Reaching here
+            // means a compiler ran, whatever the cache said a moment ago —
+            // including when a patch was attempted and turned out to be
+            // impossible. Deriving this from the cache outcome instead would
+            // meter a four-minute compile as a patched build.
+            WasPatched: false);
+    }
+
+    /// <summary>
+    /// Patches the cached artifact, or answers null when it cannot be patched.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Only <see cref="PatchNotPossibleException"/> is recovered from, and
+    /// only into a full build. Anything else — a signing tool that fails, a
+    /// runner with no disk — is a real failure and must surface, because
+    /// falling back on those would turn a fleet that cannot sign anything into
+    /// a fleet that is merely slow, and nobody would notice for weeks.
+    /// </remarks>
+    private async Task<BuiltArtifact?> TryPatchAsync(
+        BuildRequest request,
+        Workflows.RunnerLease lease,
+        CacheLookup cached,
+        CancellationToken token)
+    {
+        var stored = await store.LoadConfigAsync(request.ConfigVersionId, token)
+            ?? throw BuildFailures.Permanent(
+                BuildFailures.ConfigInvalid,
+                $"Configuration version {request.ConfigVersionId} disappeared mid-build.");
+
+        var validated = new ConfigValidator().Validate(stored.Body);
+
+        if (!validated.Result.Valid)
+        {
+            throw BuildFailures.Permanent(
+                BuildFailures.ConfigInvalid,
+                "The configuration stopped being valid between validation and build.");
+        }
+
+        try
+        {
+            return await patcher.PatchAsync(
+                request,
+                lease,
+                cached,
+                validated.Resolved,
+                (line, isError, ct) => logs.AppendAsync(request.BuildId, line, isError, ct),
+                token);
+        }
+        catch (PatchNotPossibleException exception)
+        {
+            await logs.AppendAsync(
+                request.BuildId,
+                $"The previous build could not be reused ({exception.Message}). Building in full.",
+                isError: false,
+                token);
+
+            return null;
+        }
     }
 
     /// <summary>Checks the signature, the manifest, the size, and the permissions.</summary>
