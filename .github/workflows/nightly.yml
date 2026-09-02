@@ -39,6 +39,16 @@ jobs:
           dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:coverage
+
+      # ⚠️ No Postgres service container here, and that is deliberate.
+      #
+      # The control plane's tests need a real server, and scripts/dev-postgres.sh
+      # starts one itself when no connection strings are in the environment. The
+      # pull-request workflow supplies a service container instead, so between
+      # the two jobs both paths are exercised — which is what this job exists to
+      # do. It is also the arrangement that stops the two workflows drifting: a
+      # service container added to one and forgotten in the other is exactly how
+      # this job broke the first time.
       - run: dotnet test -c Release
 
       # Budgets are asserted inside the suites above; this records the numbers

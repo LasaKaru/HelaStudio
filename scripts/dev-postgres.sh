@@ -17,8 +17,25 @@
 set -uo pipefail
 
 port="${SHELLWRIGHT_PG_PORT:-55432}"
-data="${SHELLWRIGHT_PG_DATA:-/var/lib/postgresql/shellwright-test}"
 database="${SHELLWRIGHT_PG_DATABASE:-shellwright_test}"
+
+# ⚠️ The data directory depends on who is running, and getting this wrong is
+# how the nightly build broke: /var/lib/postgresql is writable only by root and
+# by the postgres account, so an ordinary user — a developer on their laptop,
+# or the `runner` account on a GitHub runner — could not create it and the
+# whole suite failed at initdb with "Permission denied".
+#
+# As root the server cannot run as root either, so it has to be handed to the
+# postgres account, and the directory has to live somewhere that account owns.
+# As anyone else, the caller runs the server themselves and any directory they
+# own will do.
+if [[ -n "${SHELLWRIGHT_PG_DATA:-}" ]]; then
+	data="$SHELLWRIGHT_PG_DATA"
+elif [[ "$(id -u)" -eq 0 ]]; then
+	data="/var/lib/postgresql/shellwright-test"
+else
+	data="${TMPDIR:-/tmp}/shellwright-pg-$(id -u)"
+fi
 
 say() { printf '%s\n' "$1" >&2; }
 
@@ -75,7 +92,12 @@ if [[ -z "$admin" ]]; then
 	if ! run_pg "$bindir/pg_ctl -D $data status" >/dev/null 2>&1; then
 		if [[ ! -s "$data/PG_VERSION" ]]; then
 			say "Initialising a cluster in $data"
-			mkdir -p "$data"
+
+			if ! mkdir -p "$data"; then
+				say "Cannot create $data. Set SHELLWRIGHT_PG_DATA to a directory you can write."
+				exit 1
+			fi
+
 			[[ "$(id -u)" -eq 0 ]] && chown postgres:postgres "$data"
 			chmod 700 "$data"
 			run_pg "$bindir/initdb -D $data -U postgres --auth=trust -E UTF8 --locale=C" >/dev/null 2>&1 || {
