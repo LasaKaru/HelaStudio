@@ -35,6 +35,9 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// <summary>Superuser connection, used only to create the throwaway database the rollback test needs.</summary>
     public string AdminConnectionString { get; private set; } = string.Empty;
 
+    /// <summary>Connection string for the role the build orchestrator runs as.</summary>
+    public string RunnerConnectionString { get; private set; } = string.Empty;
+
     /// <inheritdoc />
     public async Task InitializeAsync()
     {
@@ -42,6 +45,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         AppConnectionString = connections.App;
         MigratorConnectionString = connections.Migrator;
         AdminConnectionString = connections.Admin;
+        RunnerConnectionString = connections.Runner;
 
         await ResetSchemaAsync();
         await MigrateAsync();
@@ -58,6 +62,23 @@ public sealed class PostgresFixture : IAsyncLifetime
         var connection = new NpgsqlConnection(AppConnectionString);
         await connection.OpenAsync();
         await TenantConnectionInterceptor.ApplyAsync(connection, userId);
+        return connection;
+    }
+
+    /// <summary>
+    /// Opens a connection as the role the build orchestrator runs as.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ No identity is stamped, deliberately. The orchestrator acts for no
+    /// particular user, which is exactly the property its policies have to
+    /// express — and exactly why it is worth testing that the property did not
+    /// leak to the API's role.
+    /// </remarks>
+    /// <returns>An open connection.</returns>
+    public async Task<NpgsqlConnection> OpenAsRunnerAsync()
+    {
+        var connection = new NpgsqlConnection(RunnerConnectionString);
+        await connection.OpenAsync();
         return connection;
     }
 
@@ -84,15 +105,19 @@ public sealed class PostgresFixture : IAsyncLifetime
         return new ShellwrightDbContext(options);
     }
 
-    private static (string App, string Migrator, string Admin) ResolveConnections()
+    private static (string App, string Migrator, string Admin, string Runner) ResolveConnections()
     {
         var app = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_APP");
         var migrator = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_MIGRATOR");
         var admin = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_ADMIN");
+        var runner = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_PG_RUNNER");
 
-        if (!string.IsNullOrEmpty(app) && !string.IsNullOrEmpty(migrator) && !string.IsNullOrEmpty(admin))
+        if (!string.IsNullOrEmpty(app)
+            && !string.IsNullOrEmpty(migrator)
+            && !string.IsNullOrEmpty(admin)
+            && !string.IsNullOrEmpty(runner))
         {
-            return (app, migrator, admin);
+            return (app, migrator, admin, runner);
         }
 
         foreach (var line in RunSetupScript().Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -126,17 +151,24 @@ public sealed class PostgresFixture : IAsyncLifetime
             {
                 admin = value;
             }
+            else if (name == "SHELLWRIGHT_TEST_PG_RUNNER")
+            {
+                runner = value;
+            }
         }
 
-        if (string.IsNullOrEmpty(app) || string.IsNullOrEmpty(migrator) || string.IsNullOrEmpty(admin))
+        if (string.IsNullOrEmpty(app)
+            || string.IsNullOrEmpty(migrator)
+            || string.IsNullOrEmpty(admin)
+            || string.IsNullOrEmpty(runner))
         {
             throw new InvalidOperationException(
                 "No test database. scripts/dev-postgres.sh did not report connection strings — "
-                + "install PostgreSQL, or set SHELLWRIGHT_TEST_PG_APP, SHELLWRIGHT_TEST_PG_MIGRATOR "
-                + "and SHELLWRIGHT_TEST_PG_ADMIN.");
+                + "install PostgreSQL, or set SHELLWRIGHT_TEST_PG_APP, SHELLWRIGHT_TEST_PG_MIGRATOR, "
+                + "SHELLWRIGHT_TEST_PG_ADMIN and SHELLWRIGHT_TEST_PG_RUNNER.");
         }
 
-        return (app, migrator, admin);
+        return (app, migrator, admin, runner);
     }
 
     private static string RunSetupScript()

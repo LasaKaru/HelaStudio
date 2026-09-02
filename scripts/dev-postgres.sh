@@ -137,13 +137,19 @@ if ! psql_admin -c 'SELECT 1' >/dev/null 2>&1; then
 	exit 1
 fi
 
-# ⚠️ The two roles are the point of this script, not an incidental detail.
+# ⚠️ The three roles are the point of this script, not an incidental detail.
 #
 #   shellwright_migrator owns every table and applies every migration.
 #   shellwright_app owns nothing, holds no BYPASSRLS, and is what the API runs
 #   as. A deployment that collapses these two into one looks identical from the
 #   outside and has no tenant isolation whatsoever, because a table's owner is
 #   not subject to its own policies.
+#   shellwright_runner is what the build orchestrator runs as. It acts for no
+#   particular user — it runs builds for everybody — so it cannot be scoped by
+#   membership, and its policies say so in the open rather than by handing it
+#   BYPASSRLS. What bounds it instead is the grant list: the build tables and
+#   the configurations it must compile, and nothing else. It cannot read a user,
+#   an organisation, an API token, or a refresh token at all.
 psql_admin <<SQL >/dev/null
 DO \$\$
 BEGIN
@@ -152,6 +158,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_app') THEN
         CREATE ROLE shellwright_app LOGIN PASSWORD 'shellwright_app' NOBYPASSRLS NOINHERIT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_runner') THEN
+        CREATE ROLE shellwright_runner LOGIN PASSWORD 'shellwright_runner' NOBYPASSRLS NOINHERIT;
     END IF;
 END
 \$\$;
@@ -168,10 +177,12 @@ psql -h "$host" -p "$pgport" -U "$adminuser" -d "$database" -v ON_ERROR_STOP=1 -
 ALTER SCHEMA public OWNER TO shellwright_migrator;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO shellwright_app;
+GRANT USAGE ON SCHEMA public TO shellwright_runner;
 SQL
 
 base="Host=$host;Port=$pgport;Database=$database"
 echo "export SHELLWRIGHT_TEST_PG_APP='$base;Username=shellwright_app;Password=shellwright_app'"
 echo "export SHELLWRIGHT_TEST_PG_MIGRATOR='$base;Username=shellwright_migrator;Password=shellwright_migrator'"
+echo "export SHELLWRIGHT_TEST_PG_RUNNER='$base;Username=shellwright_runner;Password=shellwright_runner'"
 echo "export SHELLWRIGHT_TEST_PG_ADMIN='Host=$host;Port=$pgport;Database=postgres;Username=$adminuser${adminpass:+;Password=$adminpass}'"
 say "Ready: $database on $host:$pgport"
