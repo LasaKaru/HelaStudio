@@ -4,7 +4,7 @@
   "globalDependencies": [".editorconfig", "tsconfig.base.json"],
   "tasks": {
     "generate": {
-      "inputs": ["schema/**"],
+      "inputs": ["schema/**", "openapi/**"],
       "outputs": ["src/generated/**"]
     },
     "build": {

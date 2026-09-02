@@ -79,13 +79,13 @@ unique-violation recovery makes four concurrent identical requests produce a
   `Debug` and a comment promising to fix it later. A debug-signed artifact would
   have satisfied a release build. The value was at the call site all along.
 - **A traversal test never awaited its assertions**, so it could not fail.
-- **Both test suites shared one database.** Each drops the schema and
-  re-migrates on start, and `dotnet test` runs projects in parallel — so
-  whichever started second pulled the schema out from under the first. It first
-  appeared as four failures I wrongly put down to my own concurrent local runs;
-  CI then failed the same way on a clean checkout, which is what showed it was
-  a defect in the test setup rather than a local footgun. The orchestrator suite
-  now owns `shellwright_orchestrator_test`.
+- **A turbo cache key that silently deleted generated code.** The `generate`
+  task declared `inputs: ["schema/**"]`, but the API client generates from
+  `openapi/**`. Editing the OpenAPI document therefore invalidated nothing, and
+  the next command depending on `generate` restored a stale cached
+  `src/generated/v1.ts` — deleting 324 lines of endpoints from a file nobody
+  edits by hand. CI's stale-client check caught it, which is exactly what that
+  check exists for.
 
 ## ⚠️ Not done, and said so
 

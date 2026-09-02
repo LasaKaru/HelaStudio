@@ -1062,6 +1062,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/apps/{appId}/builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List builds, newest first. */
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number | string;
+                };
+                header?: never;
+                path: {
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfBuildResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Start a build. Requires an Idempotency-Key. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartBuildRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BuildResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/apps/{appId}/builds/{buildId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one build. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appId: string;
+                    buildId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BuildResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/apps/{appId}/builds/{buildId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask a running build to stop. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appId: string;
+                    buildId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BuildResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/apps/{appId}/builds/{buildId}/artifact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a short-lived download link for a finished build. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appId: string;
+                    buildId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArtifactLinkResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/apps/{appId}/builds/{buildId}/artifact/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an artifact using a signed link. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appId: string;
+                    buildId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1122,6 +1343,21 @@ export interface components {
              */
             createdAt: string;
         };
+        /** @description Where to fetch a finished artifact. */
+        ArtifactLinkResponse: {
+            /** @description A short-lived link. */
+            url: string;
+            /**
+             * Format: int32
+             * @description How many seconds it stays valid.
+             */
+            expiresIn: number | string;
+            /**
+             * Format: int64
+             * @description How large the download is.
+             */
+            bytes: number | string;
+        };
         /** @description An uploaded asset as the API reports it. */
         AssetResponse: {
             /** @description The `asset://sha256-…` reference to put in a configuration. */
@@ -1148,6 +1384,77 @@ export interface components {
             /** @description True when these exact bytes were already stored. */
             deduplicated: boolean;
         };
+        /**
+         * @description How much of a previous build was reused.
+         * @enum {unknown}
+         */
+        BuildCacheOutcome: "Miss" | "Warm" | "Patch" | "Complete";
+        /**
+         * @description Which platform a build targets.
+         * @enum {unknown}
+         */
+        BuildPlatform: "Android" | "Ios";
+        /** @description A build, as the API reports it. */
+        BuildResponse: {
+            /**
+             * Format: uuid
+             * @description Identifier.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Which app.
+             */
+            appId: string;
+            /**
+             * Format: uuid
+             * @description Exactly what was built.
+             */
+            configVersionId: string;
+            platform: components["schemas"]["BuildPlatform"];
+            type: components["schemas"]["BuildType"];
+            state: components["schemas"]["BuildState"];
+            cacheOutcome: components["schemas"]["BuildCacheOutcome"];
+            /**
+             * Format: int32
+             * @description Metered runner time.
+             */
+            runnerSeconds: number | string;
+            /** @description A stable code for why it failed, or null. */
+            failureCode: string | null;
+            /** @description What a person can do about it, or null. */
+            failureMessage: string | null;
+            /**
+             * Format: int64
+             * @description Size of what it produced, or null.
+             */
+            artifactBytes: (number | string | (null)) | null;
+            /**
+             * Format: date-time
+             * @description When it was accepted.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When a runner picked it up, or null.
+             */
+            startedAt: string | null;
+            /**
+             * Format: date-time
+             * @description When it ended, or null.
+             */
+            finishedAt: string | null;
+        };
+        /**
+         * @description Where a build has got to.
+         * @enum {unknown}
+         */
+        BuildState: "Queued" | "Generating" | "Building" | "Verifying" | "Succeeded" | "Failed" | "Cancelled";
+        /**
+         * @description What kind of artifact a build produces.
+         * @enum {unknown}
+         */
+        BuildType: "Debug" | "Release";
         /** @description What the caller looks like to the API. */
         CallerResponse: {
             /** @description The authenticated subject. */
@@ -1288,6 +1595,13 @@ export interface components {
          */
         OrgRole: "Viewer" | "Developer" | "Admin" | "Owner";
         /** @description A page of results. */
+        PageOfBuildResponse: {
+            /** @description The page. */
+            items: components["schemas"]["BuildResponse"][];
+            /** @description Pass back as `cursor` for the following page, or null at the end. */
+            nextCursor: string | null;
+        };
+        /** @description A page of results. */
         PageOfVersionSummary: {
             /** @description The page. */
             items: components["schemas"]["VersionSummary"][];
@@ -1333,6 +1647,16 @@ export interface components {
         /** @description Change somebody's role. */
         SetMemberRoleRequest: {
             role: components["schemas"]["OrgRole"];
+        };
+        /** @description What a caller asks for when starting a build. */
+        StartBuildRequest: {
+            platform: components["schemas"]["BuildPlatform"];
+            type: components["schemas"]["BuildType"];
+            /**
+             * Format: uuid
+             * @description The exact version to build, or null for the app's current one.
+             */
+            configVersionId: string | null;
         };
         /** @description A token from an emailed link. */
         TokenRequest: {

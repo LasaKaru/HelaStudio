@@ -403,18 +403,19 @@ Programme total: **1,134 tests** — 241 TypeScript (239 config-schema, 2 studio
 Temporal, for the same reason: what it checks is their behaviour. Each fixture
 starts what it needs when the corresponding connection string is absent.
 
-⚠️ **The two suites own separate databases**, and that is not a convention —
-it is load-bearing. Both fixtures `DROP SCHEMA public CASCADE` and re-migrate on
-start, and `dotnet test` runs test projects in parallel, so sharing one database
-means whichever starts second pulls the schema out from under the first. That
-failed CI once, and the errors it produced ("relation `__migrations` does not
-exist", policy violations on rows that should have existed) read like real
-defects in the code under test rather than like two suites fighting.
+⚠️ **The two suites own separate databases**, and do not run against one
+another's. Both fixtures `DROP SCHEMA public CASCADE` and re-migrate when they
+start, so two suites pointed at one database at the same time means whichever
+starts second pulls the schema out from under the first — producing failures
+that read like real defects in the code under test rather than like two suites
+fighting.
 
-The API suite uses `shellwright_test`; the orchestrator suite uses
-`shellwright_orchestrator_test` and deliberately ignores the `SHELLWRIGHT_TEST_PG_*`
-variables, which in CI name the API's database. Override it alone with
-`SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER` and `..._MIGRATOR`.
+`dotnet test` on the solution serialises these two projects, so this does not
+arise in CI; it arises when somebody runs the two suites side by side, which is
+an ordinary thing to do. The API suite uses `shellwright_test`; the orchestrator
+suite uses `shellwright_orchestrator_test` and deliberately ignores the
+`SHELLWRIGHT_TEST_PG_*` variables, which name the API's database. Override it
+alone with `SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER` and `..._MIGRATOR`.
 
 ⚠️ The API suite needs a real PostgreSQL and will not run without one. The
 fixture starts a cluster itself when no connection strings are in the

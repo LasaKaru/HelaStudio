@@ -23,12 +23,16 @@ namespace Shellwright.Orchestrator.Tests.Infrastructure;
 /// does not have.
 ///
 /// ⚠️ Its own database, not the API suite's. Both fixtures drop the schema and
-/// re-migrate when they start, and `dotnet test` runs test projects in
-/// parallel — so sharing one database means whichever starts second pulls the
-/// schema out from under the first. That failed CI once, with errors
-/// ("relation __migrations does not exist", policy violations on rows that
-/// should have existed) that read like real defects in the code under test
-/// rather than like two suites fighting over a database.
+/// re-migrate when they start, so two suites running against one database at
+/// the same time means whichever starts second pulls the schema out from under
+/// the first — which produces failures that read like real defects in the code
+/// under test ("relation __migrations does not exist", policy violations on
+/// rows that should have existed).
+///
+/// `dotnet test` on the solution happens to serialise these two projects
+/// today, so this is defence rather than a fix for an observed CI failure; what
+/// it does prevent is a developer running the two suites side by side, which is
+/// an ordinary thing to do and which did produce exactly those failures.
 /// </remarks>
 public sealed class BuildDatabaseFixture : IAsyncLifetime
 {
@@ -81,10 +85,9 @@ public sealed class BuildDatabaseFixture : IAsyncLifetime
     private static (string Runner, string Migrator) Resolve()
     {
         // ⚠️ The environment variables the API suite uses are ignored here, on
-        // purpose. In CI they name the API's database, and honouring them would
-        // put both suites back on one database — which is the failure this
-        // class exists to avoid. An explicit override for this suite alone is
-        // still available.
+        // purpose: in CI they name the API's database, and honouring them would
+        // put both suites back on one. An explicit override for this suite
+        // alone is still available.
         var runner = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER");
         var migrator = Environment.GetEnvironmentVariable("SHELLWRIGHT_TEST_ORCHESTRATOR_PG_MIGRATOR");
 
