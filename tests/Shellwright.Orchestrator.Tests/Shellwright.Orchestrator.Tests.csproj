@@ -19,6 +19,7 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Temporalio.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Xunit.SkippableFact" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

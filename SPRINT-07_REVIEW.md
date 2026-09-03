@@ -5,18 +5,18 @@ cancellably, and cheaply enough that most builds do not run a compiler.
 
 ## Exit criteria
 
-| Criterion                                                      | Status                                                            |
-| -------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Temporal workflow with retries, cancellation, and compensation | ✅ against a real Temporal dev server                             |
-| Builds run in a fresh, isolated environment, destroyed after   | ⚠️ **argument-level only** — no container runtime here            |
-| A cancelled build frees its runner within five seconds         | ✅ asserted; the compensation path is uncancellable by design     |
-| Three-way cache key with a working fast path                   | ✅ and the outcome names are now held to what the code does       |
-| Live build logs, with credentials scrubbed before storage      | ✅ against a real Redis, driven by a corpus of real tool output   |
-| Build API: start, watch, cancel, download                      | ✅ six endpoints, `Idempotency-Key` required on start             |
-| Metering that survives retries                                 | ✅ unique index on `build_id`, `ON CONFLICT DO NOTHING`           |
-| Tenant isolation over the build tables                         | ✅ 8 tests; `BYPASSRLS` fails six of them                         |
-| **Android APK produced end to end**                            | ❌ **not done** — no Android SDK in this environment              |
-| Measured build times and cache hit rate                        | ⚠️ **partial** — the parts this repo owns are measured; see below |
+| Criterion                                                      | Status                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Temporal workflow with retries, cancellation, and compensation | ✅ against a real Temporal dev server                                      |
+| Builds run in a fresh, isolated environment, destroyed after   | ⚠️ **argument-level only** — no container runtime here                     |
+| A cancelled build frees its runner within five seconds         | ✅ asserted; the compensation path is uncancellable by design              |
+| Three-way cache key with a working fast path                   | ✅ and the outcome names are now held to what the code does                |
+| Live build logs, with credentials scrubbed before storage      | ✅ against a real Redis, driven by a corpus of real tool output            |
+| Build API: start, watch, cancel, download                      | ✅ six endpoints, `Idempotency-Key` required on start                      |
+| Metering that survives retries                                 | ✅ unique index on `build_id`, `ON CONFLICT DO NOTHING`                    |
+| Tenant isolation over the build tables                         | ✅ 8 tests; `BYPASSRLS` fails six of them                                  |
+| **Android APK produced end to end**                            | ⚠️ **partial** — patch path proven against the real SDK; no Gradle compile |
+| Measured build times and cache hit rate                        | ⚠️ **partial** — the parts this repo owns are measured; see below          |
 
 **720 .NET tests** (187 new: 151 orchestrator, 36 API) and **241 TypeScript
 tests**, all green. Programme total **1,134**.
@@ -89,10 +89,20 @@ unique-violation recovery makes four concurrent identical requests produce a
 
 ## ⚠️ Not done, and said so
 
-- **No Android APK has been built by this pipeline.** There is no Android SDK
-  here. `zipalign` and `apksigner` are asserted at the argument level, the same
-  footing as the container hardening and the iOS toolchain.
-- **No container isolation has actually run.** Docker is unavailable, so
+- **No Android APK has been built by a full Gradle compile.** The _patch_ path
+  is proven end to end against the real SDK — `aapt2` links a genuine APK,
+  `zipalign` and `apksigner` run, and `apksigner verify` accepts the result.
+  What has never run here is a Gradle build, which needs the Android Gradle
+  Plugin and a network fetch of its dependencies.
+
+  ⚠️ This entry previously read "there is no Android SDK in this environment".
+  That was wrong and I had not checked: `/opt/android-sdk` was there all along,
+  with build-tools 35 and 36. The correction is worth more than the original
+  claim, because it moved the largest caveat on this sprint from asserted to
+  demonstrated.
+
+- **No container isolation has actually run.** There is a Docker client but no
+  daemon, so
   `DockerBuildSandbox` is asserted by the arguments it would pass.
   `LocalBuildSandbox` refuses to start unless explicitly permitted.
 - **No measured cache hit rate.** It needs real builds on a real runner. "70–80%

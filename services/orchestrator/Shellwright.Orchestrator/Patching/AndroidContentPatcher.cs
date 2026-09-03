@@ -29,20 +29,27 @@ namespace Shellwright.Orchestrator.Patching;
 /// builds running at once.
 /// </para>
 /// <para>
-/// ⚠️ The old signature is dropped, deliberately and completely. An APK whose
-/// contents changed but whose <c>META-INF</c> still holds the previous
-/// signature is not a signed APK — it is a corrupt one that some tools will
-/// install and others will reject, which is far worse than one that is honestly
-/// unsigned until <c>apksigner</c> has run.
+/// ⚠️ The old signature is dropped, so that the intermediate archive is
+/// honestly unsigned until <c>apksigner</c> has run. That matters on the
+/// failure path: if signing fails the aligned file is still on disk, and it
+/// must not look like a signed APK to anything that finds it.
+/// </para>
+/// <para>
+/// It is <i>not</i> what makes the output valid. Tested against the real tool:
+/// apksigner replaces <c>META-INF</c> wholesale when it signs, so leaving the
+/// stale entries in place still verifies — under v1 signing as well as v2 and
+/// v3. An earlier version of this comment claimed otherwise and was wrong.
 /// </para>
 /// </remarks>
 /// <param name="artifacts">Where cached artifacts are fetched from.</param>
 /// <param name="sandbox">Runs the align and sign steps.</param>
 /// <param name="signing">Which key to sign with.</param>
+/// <param name="toolchain">Which build tools to run.</param>
 public sealed class AndroidContentPatcher(
     IArtifactStore artifacts,
     IBuildSandbox sandbox,
-    AndroidSigningIdentity signing) : IArtifactPatcher
+    AndroidSigningIdentity signing,
+    AndroidToolchain toolchain) : IArtifactPatcher
 {
     /// <summary>Where the shell reads its configuration from inside the APK.</summary>
     /// <remarks>
@@ -110,14 +117,14 @@ public sealed class AndroidContentPatcher(
 
         await RunAsync(
             lease,
-            AndroidPatchCommands.Align(patchedPath, alignedPath),
+            AndroidPatchCommands.Align(toolchain, patchedPath, alignedPath),
             "zipalign",
             onLine,
             cancellationToken);
 
         await RunAsync(
             lease,
-            AndroidPatchCommands.Sign(signing, alignedPath),
+            AndroidPatchCommands.Sign(toolchain, signing, alignedPath),
             "apksigner",
             onLine,
             cancellationToken);
@@ -200,10 +207,11 @@ public sealed class AndroidContentPatcher(
             return false;
         }
 
-        // ⚠️ The v1 manifest goes too, not only the signature blocks. It lists a
-        // digest for every entry in the archive, including the one just
-        // replaced, so leaving it behind produces an APK that fails
-        // verification in a way that reads like a corrupted download.
+        // The v1 manifest goes too, not only the signature blocks: it lists a
+        // digest for every entry, including the one just replaced, so it is
+        // stale the moment the config is swapped. apksigner regenerates it, but
+        // an archive that has not reached the signer yet should not carry
+        // digests that disagree with its own contents.
         if (entryPath.Equals("META-INF/MANIFEST.MF", StringComparison.Ordinal))
         {
             return true;
@@ -270,6 +278,39 @@ public sealed record AndroidSigningIdentity(
     string StorePasswordFile,
     string KeyPasswordFile);
 
+/// <summary>
+/// Which Android build tools to run.
+/// </summary>
+/// <remarks>
+/// <para>
+/// ⚠️ An explicit location rather than whatever is on <c>PATH</c>. Bare tool
+/// names take the first <c>zipalign</c> the process happens to find, which
+/// makes the toolchain an accident of how the runner was provisioned — and the
+/// cache key claims a toolchain identity it would then not control. Pinning a
+/// build-tools version per app (BD-09) is impossible until the command names a
+/// directory.
+/// </para>
+/// <para>
+/// Null falls back to the bare names, which is right inside the runner image
+/// where the tools are on <c>PATH</c> by construction and there is exactly one
+/// version installed.
+/// </para>
+/// </remarks>
+/// <param name="BuildToolsPath">
+/// The <c>build-tools/&lt;version&gt;</c> directory, or null to use <c>PATH</c>.
+/// </param>
+public sealed record AndroidToolchain(string? BuildToolsPath)
+{
+    /// <summary>The toolchain the runner image provides on its path.</summary>
+    public static AndroidToolchain FromPath { get; } = new((string?)null);
+
+    /// <summary>Resolves one tool to something a process can start.</summary>
+    /// <param name="tool">The tool's name, such as <c>zipalign</c>.</param>
+    /// <returns>An absolute path, or the bare name.</returns>
+    public string Resolve(string tool) =>
+        string.IsNullOrWhiteSpace(BuildToolsPath) ? tool : Path.Combine(BuildToolsPath, tool);
+}
+
 /// <summary>The commands the patch path runs.</summary>
 /// <remarks>
 /// ⚠️ Argument arrays, for the same reason as <see cref="BuildCommands"/>: file
@@ -279,12 +320,13 @@ public sealed record AndroidSigningIdentity(
 public static class AndroidPatchCommands
 {
     /// <summary>Re-aligns a rebuilt archive.</summary>
+    /// <param name="toolchain">Which build tools to run.</param>
     /// <param name="input">The rebuilt APK.</param>
     /// <param name="output">Where to write the aligned one.</param>
     /// <returns>The command.</returns>
-    public static SandboxCommand Align(string input, string output) =>
+    public static SandboxCommand Align(AndroidToolchain toolchain, string input, string output) =>
         new(
-            "zipalign",
+            (toolchain ?? AndroidToolchain.FromPath).Resolve("zipalign"),
             [
                 // Overwrite: the workspace is fresh, but a retried activity
                 // reruns this step and must not fail on its own leftovers.
@@ -301,15 +343,19 @@ public static class AndroidPatchCommands
             Path.GetDirectoryName(output) ?? ".");
 
     /// <summary>Signs an aligned archive.</summary>
+    /// <param name="toolchain">Which build tools to run.</param>
     /// <param name="signing">Which key to sign with.</param>
     /// <param name="apkPath">The aligned APK, signed in place.</param>
     /// <returns>The command.</returns>
-    public static SandboxCommand Sign(AndroidSigningIdentity signing, string apkPath)
+    public static SandboxCommand Sign(
+        AndroidToolchain toolchain,
+        AndroidSigningIdentity signing,
+        string apkPath)
     {
         ArgumentNullException.ThrowIfNull(signing);
 
         return new SandboxCommand(
-            "apksigner",
+            (toolchain ?? AndroidToolchain.FromPath).Resolve("apksigner"),
             [
                 "sign",
                 "--ks",

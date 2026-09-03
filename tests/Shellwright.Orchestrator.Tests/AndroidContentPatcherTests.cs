@@ -85,9 +85,11 @@ public sealed class AndroidContentPatcherTests : IDisposable
 
         using var patched = await ZipFile.OpenReadAsync(PatchedPath());
 
-        // ⚠️ An APK whose contents changed but whose META-INF still claims the
-        // old digests is not a signed APK — it is a corrupt one that some tools
-        // install and others reject.
+        // ⚠️ So the intermediate is honestly unsigned until apksigner has run —
+        // which matters on the failure path, where the aligned file is left on
+        // disk. It is not what makes the final APK valid: apksigner replaces
+        // META-INF wholesale, and AndroidToolchainTests confirms that against
+        // the real tool.
         patched.Entries.Select(entry => entry.FullName)
             .Should().NotContain([
                 "META-INF/MANIFEST.MF",
@@ -268,7 +270,8 @@ public sealed class AndroidContentPatcherTests : IDisposable
                 Path.Combine(root, "debug.keystore"),
                 "androiddebugkey",
                 Path.Combine(root, "store.pw"),
-                Path.Combine(root, "key.pw")));
+                Path.Combine(root, "key.pw")),
+            AndroidToolchain.FromPath);
 
         return (patcher, sandbox, new CacheLookup(CacheOutcome.Patch, uploaded.ArtifactReference, uploaded.Bytes));
 

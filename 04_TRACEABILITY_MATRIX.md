@@ -292,12 +292,14 @@ iOS `ShellCore` suite: **48 tests**, 0 failures.
 
 ### Sprint 07 status notes
 
-⚠️ **BD-02 is partial.** Everything around the Android build is done and tested
-— the workflow, the sandbox arguments, the cache fast path, verification,
-storage, the API — but no APK has been produced by this pipeline, because there
-is no Android SDK in this environment. `zipalign` and `apksigner` are asserted
-at the argument level, the same footing as the container hardening and the iOS
-toolchain. The criterion stays open until a runner exists.
+⚠️ **BD-02 is partial.** The patch path is proven end to end against the real
+Android SDK: `aapt2` links a genuine APK, `zipalign` and `apksigner` run, and
+`apksigner verify` accepts the output (`TC-S07-BLD-094`–`097`). What has not run
+here is a full Gradle compile, which needs the Android Gradle Plugin and its
+dependencies over the network. The criterion stays open until that does.
+
+⚠️ Those tests skip, loudly, when the build tools are absent, and report where
+they looked. A silent skip is how a suite stays green while testing nothing.
 
 ☑ **BD-07 is done.** Logs stream live through a bounded Redis stream and are
 archived to disk, with credentials removed before either sees them. What is not

@@ -127,6 +127,11 @@ public static class OrchestratorHostExtensions
         services.AddSingleton<IRunnerPool, LocalRunnerPool>();
         services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();
         services.AddSingleton<IArtifactVerifier, AndroidArtifactVerifier>();
+        // ⚠️ From configuration, so a runner can pin a build-tools version
+        // rather than inheriting whatever provisioning left on PATH.
+        services.AddSingleton(provider =>
+            new AndroidToolchain(configuration["Sandbox:AndroidBuildToolsPath"]));
+
         services.AddSingleton<IArtifactPatcher, AndroidContentPatcher>();
 
         return services;

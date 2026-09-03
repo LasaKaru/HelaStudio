@@ -167,7 +167,8 @@ public sealed class BuildPerformanceTests(RedisFixture redis, ITestOutputHelper 
                 Path.Combine(root, "debug.keystore"),
                 "androiddebugkey",
                 Path.Combine(root, "store.pw"),
-                Path.Combine(root, "key.pw")));
+                Path.Combine(root, "key.pw")),
+            AndroidToolchain.FromPath);
 
         var lease = new RunnerLease(
             "perf",
