@@ -373,6 +373,48 @@ still green. The whole of `Data/Sql/RunnerRole.up.sql` exists to make the
 orchestrator's reach a short list rather than "everything", and connecting as
 the wrong role discards it in one line of configuration.
 
+### 22. Provide a macOS host, or a hosted Mac provider 💳 ⏳ 🔒
+
+**Nothing in this repository has ever run an iOS build.** Sprint 08 ships the
+fleet rules, the build plan, the Xcode commands and the IPA verifier, all
+asserted on Linux. `IMacHostProvider` has no implementation, because there is
+no Mac and no provider account.
+
+What is needed, in order:
+
+1. **A macOS machine that can run Xcode.** Either a hosted Mac (MacStadium,
+   Scaleway, AWS EC2 Mac) or an owned Apple Silicon mini. The plan commits to
+   starting hosted and moving to owned once volume justifies the capex, which
+   is why the provider is an interface.
+2. **An implementation of `IMacHostProvider`** for whichever it is. The rules it
+   must not break are already enforced by `MacFleet` and its tests: at most two
+   VMs per physical host (Apple's licence), one host held in reserve, and a VM
+   that starts holding nothing from the previous tenant.
+3. **Health checks that exercise the toolchain,** not just SSH. A Mac whose
+   Xcode install has corrupted answers SSH perfectly and fails every build it
+   takes.
+
+⚠️ Two Xcodes — N and N−1 — must be installable side by side, and
+`Ios__DeveloperDirectory` must name the one to use. A host with two Xcodes and
+no `DEVELOPER_DIR` builds with whichever `xcode-select` last pointed at, which
+is how a submission gets rejected for a reason no log explains.
+
+### 23. Provide an Apple team identifier for iOS builds 🔒
+
+`Ios__TeamId` — the ten-character Apple Developer team the platform's own
+development-signed builds are exported for. Without it an iOS build is refused
+at planning time rather than after the archive, which is deliberate.
+
+This is the _platform's_ team, for development builds. Signing a customer's app
+with the customer's own credentials is a separate thing with its own custody
+rules (§18.2) and its own sprint — it is not this value with a different method
+set on it.
+
+⚠️ Set `Ios__XcodeVersion` to the Xcode the fleet actually runs. It is also the
+`xcode` entry in the build cache key, so a value that does not match the hosts
+means artifacts get served that were built by a different toolchain. Changing it
+invalidates every cached iOS build, which is the intent.
+
 ---
 
 ## Running cost

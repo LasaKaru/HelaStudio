@@ -39,9 +39,22 @@ public static class BuildFailures
     /// <summary>Object storage or another dependency failed. Worth retrying.</summary>
     public const string StorageUnavailable = "StorageUnavailable";
 
+    /// <summary>
+    /// This deployment cannot build for that platform at all. Retrying cannot help.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Distinct from <see cref="RunnerUnavailable"/>, and the distinction is
+    /// the whole reason it exists. "No runner is free" is a condition that
+    /// passes in a minute and is worth waiting for; "there is no macOS fleet" or
+    /// "no Apple team is configured" does not pass, and telling a customer their
+    /// build is queued for a runner that will never exist is a lie that costs
+    /// them twenty minutes before it fails anyway.
+    /// </remarks>
+    public const string PlatformUnavailable = "PlatformUnavailable";
+
     /// <summary>Every failure a retry cannot fix.</summary>
     public static ImmutableArray<string> NonRetryable { get; } =
-        [ConfigInvalid, CompilationFailed, VerificationFailed];
+        [ConfigInvalid, CompilationFailed, VerificationFailed, PlatformUnavailable];
 
     /// <summary>Builds a failure that Temporal will not retry.</summary>
     /// <param name="type">One of the non-retryable type names.</param>

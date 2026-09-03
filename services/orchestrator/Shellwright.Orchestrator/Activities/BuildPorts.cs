@@ -102,14 +102,15 @@ public interface IBuildLogPipeline
 }
 
 /// <summary>
-/// The commands each platform's build runs.
+/// The commands an Android build runs.
 /// </summary>
 /// <remarks>
-/// ⚠️ Kept in one place, and always as argument arrays. The values that reach a
+/// ⚠️ Always argument arrays, never shell strings. The values that reach a
 /// build command come from a customer's configuration — an app name, a version
 /// string — and an app named <c>Foo"; rm -rf / #</c> is a legal app name.
 /// Building the command line as a string anywhere would make that a shell
-/// injection with a REST endpoint in front of it.
+/// injection with a REST endpoint in front of it. iOS's equivalents live in
+/// <c>IosBuildCommands</c>; <c>BuildPlanner</c> chooses between them.
 /// </remarks>
 public static class BuildCommands
 {
@@ -117,6 +118,7 @@ public static class BuildCommands
     /// <param name="request">The build.</param>
     /// <param name="project">The generated project.</param>
     /// <returns>The command to run.</returns>
+    /// <exception cref="NotSupportedException">The request is not for Android.</exception>
     public static SandboxCommand For(BuildRequest request, GeneratedProject project)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -124,8 +126,12 @@ public static class BuildCommands
 
         if (request.Platform != BuildPlatform.Android)
         {
+            // Guarded rather than assumed. This method is reachable only
+            // through BuildPlanner's Android arm today, and a caller that got
+            // here with an iOS request would otherwise be handed a Gradle
+            // invocation for a project that has no Gradle in it.
             throw new NotSupportedException(
-                "iOS builds need a macOS runner, which arrives in Sprint 08.");
+                $"{request.Platform} does not build with Gradle.");
         }
 
         var task = request.Type == BuildType.Release ? "assembleRelease" : "assembleDebug";
@@ -157,10 +163,17 @@ public static class BuildCommands
     /// <param name="request">The build.</param>
     /// <param name="project">The generated project.</param>
     /// <returns>The path to look in.</returns>
+    /// <exception cref="NotSupportedException">The request is not for Android.</exception>
     public static string ArtifactPath(BuildRequest request, GeneratedProject project)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(project);
+
+        if (request.Platform != BuildPlatform.Android)
+        {
+            throw new NotSupportedException(
+                $"{request.Platform} does not leave its artifact in Gradle's output tree.");
+        }
 
         var flavour = request.Type == BuildType.Release ? "release" : "debug";
 

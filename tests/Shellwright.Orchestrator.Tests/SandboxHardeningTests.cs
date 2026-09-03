@@ -175,9 +175,20 @@ public sealed class SandboxHardeningTests
         command.Environment!["GRADLE_OPTS"].Should().Contain("-Xmx");
     }
 
-    /// <summary>iOS is refused with an explanation rather than producing a Gradle command.</summary>
+    /// <summary>
+    /// An iOS build never receives a Gradle invocation.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This test previously asserted a Sprint 07 stopgap — that iOS was
+    /// refused outright "until Sprint 08". Sprint 08 arrived, and iOS is now
+    /// planned by <c>BuildPlanner</c>. What survives, and is worth keeping, is
+    /// the narrower property: <c>BuildCommands</c> is the Android toolchain and
+    /// refuses anything else, so a routing mistake anywhere upstream fails here
+    /// rather than running <c>./gradlew</c> in a directory with no Gradle in it
+    /// and blaming the customer's configuration for the exit code.
+    /// </remarks>
     [Fact]
-    public void An_ios_build_is_refused_until_there_is_a_mac()
+    public void An_ios_build_never_gets_a_gradle_command()
     {
         var request = new BuildRequest(
             Guid.NewGuid(),
@@ -187,9 +198,13 @@ public sealed class SandboxHardeningTests
             BuildPlatform.Ios,
             BuildType.Release);
 
-        var build = () => BuildCommands.For(request, new GeneratedProject("/workspace", 28));
+        var project = new GeneratedProject("/workspace", 28);
 
-        build.Should().Throw<NotSupportedException>().WithMessage("*macOS runner*");
+        var build = () => BuildCommands.For(request, project);
+        var artifact = () => BuildCommands.ArtifactPath(request, project);
+
+        build.Should().Throw<NotSupportedException>().WithMessage("*Gradle*");
+        artifact.Should().Throw<NotSupportedException>();
     }
 
     /// <summary>

@@ -216,6 +216,44 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   unique index and `ON CONFLICT DO NOTHING`.
 - 187 new tests (151 orchestrator, 36 API). Programme total 1,134.
 
+#### Sprint 08 — iOS builds, the Mac fleet, and artifact storage
+
+- A build is now a **plan** — an ordered list of named steps plus the files to
+  write first — rather than a single command. Android's has one step; iOS has
+  four: report the toolchain, generate the Xcode project, archive, export
+  (ADR 0011). The plan is data, so every flag an iOS build would pass is
+  asserted on Linux.
+- iOS build commands with Xcode pinned per deployment. `DEVELOPER_DIR` rather
+  than `xcode-select --switch`, which is machine-global and would change which
+  Xcode every other build on the host is using mid-flight. Provisioning updates
+  are explicitly off on every `xcodebuild` invocation, and export signing is
+  manual: a compile must not mint credentials on a customer's Apple team as a
+  side effect.
+- IPA verification: `Payload/` with exactly one `.app`, an `Info.plist`, an
+  executable, an embedded provisioning profile, and size floors and ceilings.
+  Structural, because whether a signature is valid is a question for `codesign`
+  on a Mac.
+- Verification now dispatches by platform and has no default arm. Previously one
+  verifier served every build, so an IPA was inspected for `classes.dex`.
+- `MacFleet`: at most two VMs per physical host (Apple's licence), one host held
+  in reserve, placement packing the fullest eligible host first — which is what
+  preserves the spare rather than spreading onto it. No I/O, so the rules hold
+  whoever supplies the hardware.
+- `ObjectStoreArtifactStore`: S3/R2 behind the existing seam, streaming both
+  ways, deduplicating before the upload, with retention as a bucket lifecycle
+  rule rather than a delete loop in a build worker. The filesystem store remains
+  for local runs; the two are interchangeable because a reference is a content
+  address rather than a URL.
+- `PlatformUnavailable`, a non-retryable failure distinct from
+  `RunnerUnavailable`. "No macOS fleet" and "no Apple team configured" do not
+  resolve by waiting, and are refused at planning time rather than after the
+  archive.
+- The Android toolchain is proven against the real SDK: `aapt2` links a genuine
+  APK with a compiled binary manifest, `zipalign` and `apksigner` run, and
+  `apksigner verify` accepts the result. `zipalign` and `apksigner` are resolved
+  through a configured build-tools path rather than taken off `PATH`.
+- 86 new tests, all orchestrator. Programme total 1,220.
+
 ### Changed
 
 - `vitest` to 3.2.6 and `vite` to 6.4.3, clearing two critical and one high
@@ -225,6 +263,32 @@ Measured against the budgets in `03_TEST_STRATEGY.md` §12, asserted in CI:
   transfer size, and dropping it removed three more advisories.
 
 ### Fixed
+
+#### Sprint 08
+
+- **No toolchain version was in the orchestrator's build cache key.** Every key
+  was computed against an injected `HashContext` that nothing registered and
+  whose toolchain map was empty, so a bump to AGP, Kotlin or Xcode invalidated
+  nothing — and every app would have gone on being served artifacts compiled by
+  the previous toolchain until something else in its configuration changed. ADR
+  0004 requires the toolchain in `codeKey` for exactly this reason. The
+  orchestrator now uses the same per-platform `ToolchainDescriptor` the
+  generator renders from.
+- The build activity metered wall-clock time across a multi-step plan, which
+  includes the orchestrator's own file writes and scheduling between steps. It
+  now sums what the sandbox measured for each command.
+- `IosBuildCommands.ExportOptions` interpolated an Apple team identifier into an
+  XML plist without checking it. The plist decides how a binary is signed.
+- The nightly `Full suite` job had no Redis and no way to get one:
+  `scripts/dev-redis.sh` starts a server but deliberately will not install
+  one, and the GitHub runner image ships PostgreSQL and not Redis. Fourteen log
+  pipeline tests had been failing there since they were written.
+- `zipalign` and `apksigner` were invoked by bare name off `PATH`, which made
+  toolchain pinning unenforceable for the two tools that decide whether an APK
+  installs.
+- `docs/perf/baseline-s07.md` justified an excluded measurement by claiming
+  there is no Android SDK in this environment. There is; the claim was never
+  checked.
 
 #### Sprint 06
 

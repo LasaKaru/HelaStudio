@@ -40,7 +40,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:coverage
 
-      # ⚠️ No Postgres service container here, and that is deliberate.
+      # ⚠️ No Postgres or Redis service container here, and that is deliberate.
       #
       # The control plane's tests need a real server, and scripts/dev-postgres.sh
       # starts one itself when no connection strings are in the environment. The
@@ -49,6 +49,16 @@ jobs:
       # do. It is also the arrangement that stops the two workflows drifting: a
       # service container added to one and forgotten in the other is exactly how
       # this job broke the first time.
+      #
+      # ⚠️ Redis needs installing first, because scripts/dev-redis.sh starts a
+      # server but deliberately will not install one — a test script that
+      # apt-installs as root on a developer's laptop is not a trade anyone
+      # agreed to. The runner image ships PostgreSQL and does not ship Redis, so
+      # this step is the difference between the two, not an inconsistency
+      # between them.
+      - name: Install Redis
+        run: sudo apt-get update && sudo apt-get install -y redis-server redis-tools
+
       - run: dotnet test -c Release
 
       # Budgets are asserted inside the suites above; this records the numbers

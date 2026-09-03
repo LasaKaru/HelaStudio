@@ -43,12 +43,16 @@ build, so it multiplies by people watching rather than by builds running.
 
 ## ⚠️ What these numbers are not
 
-**The patch figure excludes `zipalign` and `apksigner`.** There is no Android
-SDK in this environment, so what is measured is the part this repository owns:
-fetching the cached artifact, rewriting the archive with the new configuration,
-and dropping the old signature. The two tool invocations are asserted at the
-argument level only — the same gap as the container hardening and the iOS
-toolchain, and recorded the same way.
+**The patch figure excludes `zipalign` and `apksigner`.** What is measured is
+the part this repository owns: fetching the cached artifact, rewriting the
+archive with the new configuration, and dropping the old signature.
+
+⚠️ This paragraph previously justified that by claiming there is no Android SDK
+in this environment. That was never checked and was false — `/opt/android-sdk`
+has build-tools 35 and 36. Sprint 08 (`TC-S07-BLD-094`–`097`) runs the real
+`aapt2`, `zipalign` and `apksigner` and verifies the signature. The figure above
+still excludes them because it was taken before those tests existed, not because
+the tools are absent; it is a floor for the archive rewriting alone.
 
 **There is no measured full-build time, and therefore no measured cache hit
 rate.** Both need a real Android toolchain on a real runner. The patch path's

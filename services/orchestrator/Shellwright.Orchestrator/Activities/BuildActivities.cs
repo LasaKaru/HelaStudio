@@ -24,7 +24,8 @@ namespace Shellwright.Orchestrator.Activities;
 /// <param name="patcher">Rebuilds a cached artifact when only content changed.</param>
 /// <param name="artifacts">Stores the finished artifact.</param>
 /// <param name="logs">Streams and archives build output.</param>
-/// <param name="hashContext">Deployment facts that feed the cache key.</param>
+/// <param name="toolchains">Which toolchain each platform builds with, and so what its cache key says.</param>
+/// <param name="planner">Turns a request into the commands that produce its artifact.</param>
 public sealed class BuildActivities(
     IBuildStore store,
     IArtifactCache cache,
@@ -35,7 +36,8 @@ public sealed class BuildActivities(
     IArtifactPatcher patcher,
     IArtifactStore artifacts,
     IBuildLogPipeline logs,
-    HashContext hashContext)
+    BuildToolchains toolchains,
+    BuildPlanner planner)
 {
     /// <summary>How often the long build activity reports progress.</summary>
     /// <remarks>
@@ -86,7 +88,7 @@ public sealed class BuildActivities(
                 new BuildHashes(string.Empty, string.Empty, string.Empty));
         }
 
-        var hashes = ConfigHasher.Compute(validated.Resolved, hashContext);
+        var hashes = ConfigHasher.Compute(validated.Resolved, toolchains.HashContextFor(request.Platform));
 
         return new ValidationOutcome(
             true,
@@ -188,39 +190,65 @@ public sealed class BuildActivities(
             }
         }
 
+        var plan = Plan(request, lease, project);
+
+        await WritePlannedFilesAsync(lease, plan, token);
+
+        // ⚠️ Two clocks, deliberately. The stopwatch is wall time since the plan
+        // began and feeds the heartbeat, which is about liveness. What is
+        // metered is the sum of what the sandbox measured for each command —
+        // the customer pays for the toolchain running, not for the
+        // orchestrator's own file writes and scheduling between steps.
         var stopwatch = Stopwatch.StartNew();
+        var metered = TimeSpan.Zero;
 
-        var command = BuildCommands.For(request, project);
+        foreach (var step in plan.Steps)
+        {
+            // Named in the log before its output, so a failure that produces
+            // nothing legible still says which of the four things an iOS build
+            // does was the one that stopped.
+            await logs.AppendAsync(request.BuildId, $"==> {step.Name}", isError: false, token);
 
-        var result = await sandbox.RunAsync(
-            lease,
-            command,
-            (line, isError, ct) => logs.AppendAsync(request.BuildId, line, isError, ct),
+            var result = await sandbox.RunAsync(
+                lease,
+                step.Command,
+                (line, isError, ct) => logs.AppendAsync(request.BuildId, line, isError, ct),
 
-            // ⚠️ Heartbeating is what makes cancellation and dead-runner
-            // detection work at all. Without it Temporal cannot tell a build
-            // that is compiling from a runner that has stopped existing, and
-            // waits out the twenty-minute timeout for both.
-            onProgress: () => context.Heartbeat(stopwatch.Elapsed.TotalSeconds),
-            cancellationToken: token);
+                // ⚠️ Heartbeating is what makes cancellation and dead-runner
+                // detection work at all. Without it Temporal cannot tell a build
+                // that is compiling from a runner that has stopped existing, and
+                // waits out the twenty-minute timeout for both.
+                //
+                // ⚠️ Elapsed is the stopwatch across the whole plan rather than
+                // one step, so the heartbeat payload keeps rising through a
+                // four-step iOS build instead of resetting at each step.
+                onProgress: () => context.Heartbeat(stopwatch.Elapsed.TotalSeconds),
+                cancellationToken: token);
+
+            metered += result.Duration;
+
+            if (result.ExitCode != 0)
+            {
+                stopwatch.Stop();
+
+                // ⚠️ Non-retryable. The same sources compiled by the same toolchain
+                // fail the same way, and each attempt costs runner minutes somebody
+                // is paying for.
+                throw BuildFailures.Permanent(
+                    BuildFailures.CompilationFailed,
+                    $"{step.Name} exited with code {result.ExitCode}. The log says why.");
+            }
+        }
 
         stopwatch.Stop();
 
-        if (result.ExitCode != 0)
-        {
-            // ⚠️ Non-retryable. The same sources compiled by the same toolchain
-            // fail the same way, and each attempt costs runner minutes somebody
-            // is paying for.
-            throw BuildFailures.Permanent(
-                BuildFailures.CompilationFailed,
-                $"The build exited with code {result.ExitCode}. The log says why.");
-        }
-
-        var artifactPath = BuildCommands.ArtifactPath(request, project);
-
         return new BuiltArtifact(
-            artifactPath,
-            (int)Math.Ceiling(result.Duration.TotalSeconds),
+            plan.ArtifactPath,
+
+            // ⚠️ Every step, not the last one. Metering the final command alone
+            // would bill an iOS build for its export and give away the
+            // archive, which is where all of the cost is.
+            (int)Math.Ceiling(metered.TotalSeconds),
 
             // ⚠️ False, unconditionally, and that is the point. Reaching here
             // means a compiler ran, whatever the cache said a moment ago —
@@ -279,6 +307,60 @@ public sealed class BuildActivities(
                 token);
 
             return null;
+        }
+    }
+
+    /// <summary>Plans the build, turning a missing platform into a build failure.</summary>
+    /// <remarks>
+    /// ⚠️ Both refusals are permanent. A deployment with no Apple team
+    /// configured, or a platform nobody has written a plan for, is a condition
+    /// that does not pass on its own — retrying it three times only spends the
+    /// customer's queue position on the same answer.
+    /// </remarks>
+    private BuildPlan Plan(BuildRequest request, Workflows.RunnerLease lease, GeneratedProject project)
+    {
+        try
+        {
+            return planner.Plan(request, lease, project);
+        }
+        catch (Exception exception) when (exception is NotSupportedException or InvalidOperationException)
+        {
+            throw BuildFailures.Permanent(BuildFailures.PlatformUnavailable, exception.Message);
+        }
+    }
+
+    /// <summary>Writes the files a plan needs before its first command runs.</summary>
+    /// <remarks>
+    /// ⚠️ Resolved against the workspace root and checked again afterwards.
+    /// <see cref="PlannedFile"/> validates its own path, so this is a second
+    /// lock on the same door — worth having, because this is the method that
+    /// actually writes to the runner's disk.
+    /// </remarks>
+    private static async Task WritePlannedFilesAsync(
+        Workflows.RunnerLease lease,
+        BuildPlan plan,
+        CancellationToken token)
+    {
+        if (plan.Files.IsEmpty)
+        {
+            return;
+        }
+
+        var root = Path.GetFullPath(lease.WorkspaceRoot);
+
+        foreach (var file in plan.Files)
+        {
+            var destination = Path.GetFullPath(Path.Combine(root, file.RelativePath));
+
+            if (!destination.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            {
+                throw BuildFailures.Permanent(
+                    BuildFailures.CompilationFailed,
+                    "A build step asked to write outside its workspace.");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            await File.WriteAllTextAsync(destination, file.Contents, token);
         }
     }
 

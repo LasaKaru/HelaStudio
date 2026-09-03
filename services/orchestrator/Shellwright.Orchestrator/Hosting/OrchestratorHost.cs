@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shellwright.Orchestrator.Activities;
 using Shellwright.Orchestrator.Artifacts;
+using Shellwright.Orchestrator.Fleet;
 using Shellwright.Orchestrator.Logs;
 using Shellwright.Orchestrator.Patching;
 using Shellwright.Orchestrator.Persistence;
@@ -149,7 +150,21 @@ public static class OrchestratorHostExtensions
         {
             services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();
         }
-        services.AddSingleton<IArtifactVerifier, AndroidArtifactVerifier>();
+        services.AddOptions<IosBuildOptions>()
+            .Bind(configuration.GetSection(IosBuildOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<BuildToolchains>();
+        services.AddSingleton<BuildPlanner>();
+
+        // ⚠️ Registered by concrete type as well, because the dispatcher takes
+        // both and a build must reach the verifier that understands its format.
+        // One verifier registered as IArtifactVerifier is how an IPA came to be
+        // inspected for classes.dex.
+        services.AddSingleton<AndroidArtifactVerifier>();
+        services.AddSingleton<IosArtifactVerifier>();
+        services.AddSingleton<IArtifactVerifier, PlatformArtifactVerifier>();
         // ⚠️ From configuration, so a runner can pin a build-tools version
         // rather than inheriting whatever provisioning left on PATH.
         services.AddSingleton(provider =>

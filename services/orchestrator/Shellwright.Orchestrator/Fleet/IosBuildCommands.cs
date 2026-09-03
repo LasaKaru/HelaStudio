@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Shellwright.Orchestrator.Sandbox;
 using Shellwright.Orchestrator.Workflows;
 
@@ -75,6 +76,8 @@ public enum IosExportMethod
 /// </remarks>
 public static class IosBuildCommands
 {
+    private static readonly Regex TeamIdPattern = new("^[A-Z0-9]{10}$", RegexOptions.CultureInvariant);
+
     /// <summary>Generates the Xcode project from the committed XcodeGen spec.</summary>
     /// <param name="toolchain">Which Xcode.</param>
     /// <param name="projectRoot">Where the generated project lives.</param>
@@ -177,6 +180,19 @@ public static class IosBuildCommands
     public static string ExportOptions(IosExportMethod method, string teamId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(teamId);
+
+        // ⚠️ Checked here rather than only where the value is configured,
+        // because this is the method that writes the XML. An Apple team
+        // identifier is ten upper-case alphanumerics; anything else — a stray
+        // </string>, an entity, a newline — would be interpolated into a plist
+        // that parses as something other than what it reads as, and the plist
+        // decides how the binary is signed.
+        if (!TeamIdPattern.IsMatch(teamId))
+        {
+            throw new ArgumentException(
+                "An Apple team identifier is ten upper-case letters and digits.",
+                nameof(teamId));
+        }
 
         var methodValue = method switch
         {

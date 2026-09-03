@@ -85,13 +85,13 @@ Maps every requirement from `SHELLWRIGHT_MASTER_SPEC.md` §12 to the sprint that
 | ----- | ---------------------------------------- | ------------- | ---------------------------------- | --------- |
 | BD-01 | Deterministic codegen both platforms     | S04, S05      | `TC-S04-GEN-029`, `TC-S05-GEN-004` | ☐         |
 | BD-02 | Android APK/AAB                          | S07           | `TC-S07-BLD-*`                     | ⚠️        |
-| BD-03 | iOS IPA                                  | S08           | `TC-S08-BLD-017`–`028`             | ☐         |
+| BD-03 | iOS IPA                                  | S08           | `TC-S08-BLD-013`–`066`             | ⚠️        |
 | BD-04 | Signing: managed / BYO / delegated       | S14           | `TC-S14-SEC-*`                     | ☐         |
 | BD-05 | App Store Connect API signing automation | S08, S14      | `TC-S08-BLD-019`                   | ☐         |
 | BD-06 | Android keystore generation and export   | S14           | `TC-S14-SEC-*`                     | ☐         |
 | BD-07 | Live build logs                          | S07           | `TC-S07-BLD-029`–`034`             | ☑        |
 | BD-08 | ⭐ Reproducible builds                   | S04, S05, S08 | `TC-S04-GEN-029`                   | ☐         |
-| BD-09 | Toolchain version pinning per app        | S08           | `TC-S08-BLD-047`, `048`            | ☐         |
+| BD-09 | Toolchain version pinning per app        | S08           | `TC-S08-BLD-047`–`053`             | ⚠️        |
 | BD-10 | ⭐ Full source export                    | S19           | `TC-S19-*`                         | ☐         |
 | BD-11 | ⭐ CLI                                   | S19           | `TC-S19-*`                         | ☐         |
 | BD-12 | Build API + webhooks                     | S19           | `TC-S19-*`                         | ☐         |
@@ -306,6 +306,36 @@ archived to disk, with credentials removed before either sees them. What is not
 done is pushing them to a browser over a WebSocket; `BuildLogReader` pages the
 stream and returns a resume position, which is what a client polls. Fan-out
 arrives with the studio.
+
+### Sprint 08 status notes
+
+⚠️ **BD-03 is partial, and the missing half is hardware.** The iOS build plan,
+the Xcode commands, the export options plist, the fleet placement rules and the
+IPA verifier are all implemented and asserted — 54 tests, all on Linux. No
+`xcodebuild` has run. `IMacHostProvider` has no implementation because there is
+no Mac and no Apple Developer account (`ACTION_REQUIRED.md` items 22 and 23).
+
+What the Linux tests can establish: that every flag, path, environment variable
+and step order is what it should be, that an export reads the plist the plan
+writes, and that an IPA is rejected for each of the seven ways it can be
+unusable. What they cannot: that `xcodebuild` accepts any of it. The criterion
+stays open until a real archive and export have run.
+
+⚠️ **BD-09 is partial.** The Xcode version is pinned, is the single source for
+both `DEVELOPER_DIR` and the `xcode` cache-key entry, and cannot be configured
+apart from itself (`TC-S08-BLD-047`–`053`). What is not yet true is _per app_
+pinning: the version is a deployment setting, so every app on a deployment
+builds with the same toolchain. Per-app pinning needs a column on the app and a
+fleet that can satisfy two versions at once, which is the migration case ADR
+0011 describes rather than implements.
+
+⚠️ **This sprint found that no toolchain version was in the orchestrator's cache
+key at all.** Every key was computed against an unregistered, empty
+`HashContext`, so an AGP, Kotlin or Xcode bump would have invalidated nothing
+and every app would have gone on receiving artifacts built by the previous
+toolchain. That is the requirement ADR 0004 records and BD-09 tracks, and it was
+silently unmet from Sprint 07 until now. `TC-S08-BLD-050` and `051` are the
+regression tests.
 
 ### Cross-implementation contracts
 
