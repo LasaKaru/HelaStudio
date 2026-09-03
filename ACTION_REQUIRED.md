@@ -321,6 +321,26 @@ should be made before any customer key is accepted, not after.
 
 ### 20. Stand up storage for build artifacts
 
+⚠️ **Partly built since this was written.** `ObjectStoreArtifactStore` speaks
+S3 and is tested against a real HTTP endpoint — path-style addressing,
+streaming upload and download, chunked transfer framing, a 60 MB round trip.
+What it has never met is R2 itself, which needs the credentials below. The
+orchestrator uses it when `ObjectStorage:ServiceUrl` is set and falls back to
+the filesystem store otherwise, so a deployment that forgets gets a disk that
+fills rather than a fleet that will not start.
+
+Set `ObjectStorage__ServiceUrl`, `__Bucket`, `__AccessKeyId` and
+`__SecretAccessKey`. R2 is the intended provider because it charges nothing for
+egress, and every artifact is downloaded at least once — egress is the bill
+that would otherwise grow with usage rather than with storage.
+
+⚠️ **Set the bucket's lifecycle rule too.** `ObjectStorage:RetentionDays`
+records the intent (90 days) but does not enforce it: expiry belongs to the
+bucket, because an object store expires objects far more cheaply than anything
+that has to enumerate them. Without the rule, storage grows for ever.
+
+#### The original note
+
 `FileSystemArtifactStore` writes finished APKs into a directory, content
 addressed by SHA-256. This is the same gap as asset blob storage (item 12) and
 has the same answer — Cloudflare R2 — but a different urgency: an artifact is

@@ -125,7 +125,30 @@ public static class OrchestratorHostExtensions
         services.AddSingleton<IArtifactCache, PostgresArtifactCache>();
 
         services.AddSingleton<IRunnerPool, LocalRunnerPool>();
-        services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();
+        services.AddOptions<ObjectStorageOptions>()
+            .Bind(configuration.GetSection(ObjectStorageOptions.SectionName));
+
+        // ⚠️ Chosen by whether object storage is configured, and the fallback is
+        // the local one. A deployment that forgot to configure R2 gets a
+        // filesystem store and a disk that fills — which is visible — rather
+        // than a startup failure that takes the build fleet down, or worse, an
+        // object store pointed at a bucket that does not exist.
+        //
+        // The two are interchangeable because an artifact reference is a
+        // content address rather than a URL, so moving between them rewrites
+        // nothing.
+        var objectStorage = configuration.GetSection(ObjectStorageOptions.SectionName)
+            .Get<ObjectStorageOptions>();
+
+        if (!string.IsNullOrWhiteSpace(objectStorage?.ServiceUrl))
+        {
+            services.AddSingleton(_ => ObjectStoreClientFactory.Create(objectStorage));
+            services.AddSingleton<IArtifactStore, ObjectStoreArtifactStore>();
+        }
+        else
+        {
+            services.AddSingleton<IArtifactStore, FileSystemArtifactStore>();
+        }
         services.AddSingleton<IArtifactVerifier, AndroidArtifactVerifier>();
         // ⚠️ From configuration, so a runner can pin a build-tools version
         // rather than inheriting whatever provisioning left on PATH.
