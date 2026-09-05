@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "All Plugins",
+    "bundleId": "dev.shellwright.allplugins",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "plugins": {
+    "haptics": {},
+    "biometric": {
+      "promptReason": "Unlock the app"
+    },
+    "qr-scanner": {
+      "formats": ["qr", "ean13", "code128"],
+      "beepOnScan": true,
+      "torchButton": true
+    },
+    "push": {
+      "provider": "shellwright",
+      "promptOnLaunch": false
+    },
+    "iap": {
+      "productsUrl": "https://app.acme.com/iap-products.json"
+    },
+    "document-scanner": {
+      "outputFormat": "pdf"
+    },
+    "nfc": {
+      "readOnly": true
+    }
+  },
+  "permissions": {
+    "camera": true,
+    "notifications": true,
+    "biometric": true
+  },
+  "build": {
+    "android": {
+      "minSdk": 26
+    },
+    "ios": {
+      "minVersion": "16.0"
+    }
+  }
+}

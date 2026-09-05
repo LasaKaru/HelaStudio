@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Deep Nesting",
+    "bundleId": "dev.shellwright.deepnesting",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "nativeSurfaces": [
+    {
+      "id": "onboarding",
+      "type": "onboarding",
+      "config": {
+        "nested": {
+          "nested": {
+            "nested": {
+              "nested": {
+                "nested": {
+                  "nested": {
+                    "nested": {
+                      "nested": {
+                        "nested": {
+                          "nested": {
+                            "nested": {
+                              "nested": {
+                                "nested": {
+                                  "nested": {
+                                    "nested": {
+                                      "nested": {
+                                        "nested": {
+                                          "nested": {
+                                            "nested": {
+                                              "nested": {
+                                                "nested": {
+                                                  "nested": {
+                                                    "nested": {
+                                                      "nested": {
+                                                        "nested": {
+                                                          "nested": {
+                                                            "nested": {
+                                                              "nested": {
+                                                                "nested": {
+                                                                  "nested": {
+                                                                    "leaf": true
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

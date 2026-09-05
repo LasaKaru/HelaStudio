@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ⚠️ Required, with zero plugins and zero tracking.
+
+  Apple checks the privacy manifest at upload and rejects a binary whose
+  required-reason API usage is undeclared. The shell reads UserDefaults to
+  remember the last loaded URL, and that alone makes this file mandatory —
+  omitting it does not mean "we collect nothing", it means the upload fails.
+
+  Sprint 10's plugin fragments merge into this file; the shell's own reasons
+  are the base.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!--
+			  CA92.1 — accessing UserDefaults for data written by this app
+			  itself, which is what the shell does and all it does.
+			-->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

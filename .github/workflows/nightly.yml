@@ -1,0 +1,233 @@
+name: Nightly
+
+# Golden files prove the generator is *stable*. They do not prove its output
+# *compiles* — only a real build does that, which is why this job exists and why
+# it is not optional. Sprint 04 found exactly one bug this way and none of the
+# 71 unit tests could have: the generated `namespace` was taken from the
+# customer's bundle id, so R and BuildConfig landed in a different package from
+# the Kotlin sources importing them, and every generated project failed to
+# compile.
+on:
+  schedule:
+    # 02:00 UTC, outside the hours anyone is pushing.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Nightly jobs to add as their sprints land:
+#   S04  install each APK on an emulator and run the two-assertion smoke test
+#   S05  real iOS build from 5 fixture configs, install on simulator, XCUITest smoke
+#   S07  end-to-end pipeline: config submitted via API produces signed artifacts
+#   S10  plugin all-pairs combination matrix
+#   S12  Playwright journeys through the studio, plus axe-core accessibility
+# See 03_TEST_STRATEGY.md sections 7 and 8.
+jobs:
+  full-suite:
+    name: Full suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:coverage
+
+      # ⚠️ No Postgres or Redis service container here, and that is deliberate.
+      #
+      # The control plane's tests need a real server, and scripts/dev-postgres.sh
+      # starts one itself when no connection strings are in the environment. The
+      # pull-request workflow supplies a service container instead, so between
+      # the two jobs both paths are exercised — which is what this job exists to
+      # do. It is also the arrangement that stops the two workflows drifting: a
+      # service container added to one and forgotten in the other is exactly how
+      # this job broke the first time.
+      #
+      # ⚠️ Redis needs installing first, because scripts/dev-redis.sh starts a
+      # server but deliberately will not install one — a test script that
+      # apt-installs as root on a developer's laptop is not a trade anyone
+      # agreed to. The runner image ships PostgreSQL and does not ship Redis, so
+      # this step is the difference between the two, not an inconsistency
+      # between them.
+      - name: Install Redis
+        run: sudo apt-get update && sudo apt-get install -y redis-server redis-tools
+
+      - run: dotnet test -c Release
+
+      # Budgets are asserted inside the suites above; this records the numbers
+      # over time so a slow drift is visible before it breaches.
+      - name: Performance budgets
+        run: pnpm --filter @shellwright/config-schema test -- test/performance.test.ts
+
+  # TC-S05-BLD-001. The only place iOS generation meets a real toolchain.
+  #
+  # ⚠️ Opt-in, and that is a cost decision rather than a preference. GitHub
+  # bills macOS at ten times the Linux rate against a fixed monthly allowance,
+  # and this matrix would spend it in days. The sprint plan's answer is to run
+  # it on the *public* shell repository, where macOS minutes are unmetered — so
+  # this becomes a scheduled job the moment shells/ios is extracted per ADR 0002
+  # (ACTION_REQUIRED.md item 9). Until then it runs by hand.
+  #
+  # Codemagic minutes are deliberately not spent here: those are reserved for
+  # signed builds, which this is not.
+  generated-ios-builds:
+    name: Generated Xcode project (${{ matrix.fixture }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture:
+          - minimal
+          - maximal
+          - unicode
+          - edge-hostile-text
+          - edge-portrait-locked
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Generate the project
+        run: dotnet run --project tools/ApproveGolden -- emit ${{ matrix.fixture }}.json generated ios
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # The check the Linux suite structurally cannot make: plutil is macOS-only,
+      # and a malformed plist is not a build warning on iOS — the file is
+      # ignored, or the build fails naming neither the key nor the cause.
+      - name: Validate the property lists
+        working-directory: generated
+        run: |
+          for plist in Resources/Shellwright.entitlements Resources/PrivacyInfo.xcprivacy; do
+            echo "Checking $plist"
+            plutil -lint "$plist"
+          done
+
+      - name: Generate the Xcode project
+        working-directory: generated
+        run: xcodegen generate
+
+      # TC-S05-GEN-028. A scheme Xcode did not mark shared is invisible to
+      # xcodebuild, which is the classic first-CI-run failure on iOS: it works
+      # on the machine that created it and nowhere else.
+      - name: The scheme is shared
+        working-directory: generated
+        run: xcodebuild -list -project *.xcodeproj
+
+      - name: Build for the simulator
+        working-directory: generated
+        run: >
+          xcodebuild build
+          -project $(ls -d *.xcodeproj)
+          -scheme "$(basename $(ls -d *.xcodeproj) .xcodeproj)"
+          -destination 'platform=iOS Simulator,name=iPhone 16'
+          CODE_SIGNING_ALLOWED=NO
+
+      # TC-S05-GEN-004. XcodeGen's determinism is a property of XcodeGen, not of
+      # this generator, so it is asserted where the tool actually runs.
+      - name: Generating twice is byte-identical
+        working-directory: generated
+        run: |
+          find . -name '*.pbxproj' -exec shasum {} \; | sort > /tmp/first.txt
+          rm -rf ./*.xcodeproj
+          xcodegen generate
+          find . -name '*.pbxproj' -exec shasum {} \; | sort > /tmp/second.txt
+          diff /tmp/first.txt /tmp/second.txt \
+            || { echo "::error::XcodeGen output is not reproducible for ${{ matrix.fixture }}."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: generated-ios-${{ matrix.fixture }}
+          path: |
+            generated/project.yml
+            generated/Resources/*.plist
+            generated/Resources/*.entitlements
+            generated/Resources/*.xcprivacy
+          if-no-files-found: ignore
+
+  # TC-S04-BLD-001. Six fixtures spanning the shapes that break codegen:
+  # nothing, everything, non-Latin script, punctuation that breaks aapt2, many
+  # tabs, many link rules.
+  generated-android-builds:
+    name: Generated project builds (${{ matrix.fixture }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Every fixture's result is wanted, not just the first failure — knowing
+      # whether one config broke or all six is most of the diagnosis.
+      fail-fast: false
+      matrix:
+        fixture:
+          - minimal
+          - maximal
+          - unicode
+          - edge-hostile-text
+          - edge-portrait-locked
+          - edge-many-tabs
+          - edge-many-linkrules
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Generate the project
+        run: dotnet run --project tools/ApproveGolden -- emit ${{ matrix.fixture }}.json generated
+
+      # Release rather than debug, because release is the harder path: it runs
+      # R8 full mode and resource shrinking, which is where a missing keep rule
+      # in a generated project would surface. It is also the only build whose
+      # size means anything — a debug APK is 16 MB and a release one 0.8 MB.
+      - name: Build it
+        working-directory: generated
+        run: ./gradlew assembleRelease lintRelease --console=plain
+
+      # TC-S04-BLD-003. Tracked per fixture, because the fixture that grows is
+      # the one that says which config shape is expensive.
+      - name: APK size budget
+        working-directory: generated
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          BYTES=$(stat -c%s "$APK")
+          LIMIT=$((12 * 1024 * 1024))
+          echo "${{ matrix.fixture }}: $((BYTES / 1024)) kB against a $((LIMIT / 1024)) kB budget"
+          if [ "$BYTES" -gt "$LIMIT" ]; then
+            echo "::error::Generated APK for ${{ matrix.fixture }} is over the 12 MB budget."
+            exit 1
+          fi
+
+      # Published on failure so a broken template can be diagnosed without
+      # reproducing the whole generation locally first.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: generated-${{ matrix.fixture }}
+          path: |
+            generated/**/*.gradle.kts
+            generated/**/AndroidManifest.xml
+            generated/**/res/values/*.xml
+            generated/.shellwright/manifest.json
+          if-no-files-found: ignore

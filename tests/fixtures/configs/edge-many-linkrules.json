@@ -1,0 +1,1023 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Many Link Rules",
+    "bundleId": "dev.shellwright.manyrules",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "rule-1",
+      "pattern": "^https://app\\.acme\\.com/section-1/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-2",
+      "pattern": "^https://app\\.acme\\.com/section-2/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-3",
+      "pattern": "^https://app\\.acme\\.com/section-3/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-4",
+      "pattern": "^https://app\\.acme\\.com/section-4/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-5",
+      "pattern": "^https://app\\.acme\\.com/section-5/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-6",
+      "pattern": "^https://app\\.acme\\.com/section-6/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-7",
+      "pattern": "^https://app\\.acme\\.com/section-7/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-8",
+      "pattern": "^https://app\\.acme\\.com/section-8/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-9",
+      "pattern": "^https://app\\.acme\\.com/section-9/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-10",
+      "pattern": "^https://app\\.acme\\.com/section-10/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-11",
+      "pattern": "^https://app\\.acme\\.com/section-11/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-12",
+      "pattern": "^https://app\\.acme\\.com/section-12/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-13",
+      "pattern": "^https://app\\.acme\\.com/section-13/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-14",
+      "pattern": "^https://app\\.acme\\.com/section-14/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-15",
+      "pattern": "^https://app\\.acme\\.com/section-15/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-16",
+      "pattern": "^https://app\\.acme\\.com/section-16/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-17",
+      "pattern": "^https://app\\.acme\\.com/section-17/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-18",
+      "pattern": "^https://app\\.acme\\.com/section-18/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-19",
+      "pattern": "^https://app\\.acme\\.com/section-19/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-20",
+      "pattern": "^https://app\\.acme\\.com/section-20/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-21",
+      "pattern": "^https://app\\.acme\\.com/section-21/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-22",
+      "pattern": "^https://app\\.acme\\.com/section-22/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-23",
+      "pattern": "^https://app\\.acme\\.com/section-23/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-24",
+      "pattern": "^https://app\\.acme\\.com/section-24/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-25",
+      "pattern": "^https://app\\.acme\\.com/section-25/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-26",
+      "pattern": "^https://app\\.acme\\.com/section-26/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-27",
+      "pattern": "^https://app\\.acme\\.com/section-27/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-28",
+      "pattern": "^https://app\\.acme\\.com/section-28/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-29",
+      "pattern": "^https://app\\.acme\\.com/section-29/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-30",
+      "pattern": "^https://app\\.acme\\.com/section-30/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-31",
+      "pattern": "^https://app\\.acme\\.com/section-31/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-32",
+      "pattern": "^https://app\\.acme\\.com/section-32/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-33",
+      "pattern": "^https://app\\.acme\\.com/section-33/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-34",
+      "pattern": "^https://app\\.acme\\.com/section-34/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-35",
+      "pattern": "^https://app\\.acme\\.com/section-35/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-36",
+      "pattern": "^https://app\\.acme\\.com/section-36/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-37",
+      "pattern": "^https://app\\.acme\\.com/section-37/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-38",
+      "pattern": "^https://app\\.acme\\.com/section-38/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-39",
+      "pattern": "^https://app\\.acme\\.com/section-39/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-40",
+      "pattern": "^https://app\\.acme\\.com/section-40/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-41",
+      "pattern": "^https://app\\.acme\\.com/section-41/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-42",
+      "pattern": "^https://app\\.acme\\.com/section-42/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-43",
+      "pattern": "^https://app\\.acme\\.com/section-43/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-44",
+      "pattern": "^https://app\\.acme\\.com/section-44/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-45",
+      "pattern": "^https://app\\.acme\\.com/section-45/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-46",
+      "pattern": "^https://app\\.acme\\.com/section-46/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-47",
+      "pattern": "^https://app\\.acme\\.com/section-47/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-48",
+      "pattern": "^https://app\\.acme\\.com/section-48/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-49",
+      "pattern": "^https://app\\.acme\\.com/section-49/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-50",
+      "pattern": "^https://app\\.acme\\.com/section-50/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-51",
+      "pattern": "^https://app\\.acme\\.com/section-51/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-52",
+      "pattern": "^https://app\\.acme\\.com/section-52/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-53",
+      "pattern": "^https://app\\.acme\\.com/section-53/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-54",
+      "pattern": "^https://app\\.acme\\.com/section-54/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-55",
+      "pattern": "^https://app\\.acme\\.com/section-55/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-56",
+      "pattern": "^https://app\\.acme\\.com/section-56/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-57",
+      "pattern": "^https://app\\.acme\\.com/section-57/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-58",
+      "pattern": "^https://app\\.acme\\.com/section-58/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-59",
+      "pattern": "^https://app\\.acme\\.com/section-59/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-60",
+      "pattern": "^https://app\\.acme\\.com/section-60/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-61",
+      "pattern": "^https://app\\.acme\\.com/section-61/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-62",
+      "pattern": "^https://app\\.acme\\.com/section-62/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-63",
+      "pattern": "^https://app\\.acme\\.com/section-63/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-64",
+      "pattern": "^https://app\\.acme\\.com/section-64/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-65",
+      "pattern": "^https://app\\.acme\\.com/section-65/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-66",
+      "pattern": "^https://app\\.acme\\.com/section-66/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-67",
+      "pattern": "^https://app\\.acme\\.com/section-67/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-68",
+      "pattern": "^https://app\\.acme\\.com/section-68/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-69",
+      "pattern": "^https://app\\.acme\\.com/section-69/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-70",
+      "pattern": "^https://app\\.acme\\.com/section-70/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-71",
+      "pattern": "^https://app\\.acme\\.com/section-71/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-72",
+      "pattern": "^https://app\\.acme\\.com/section-72/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-73",
+      "pattern": "^https://app\\.acme\\.com/section-73/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-74",
+      "pattern": "^https://app\\.acme\\.com/section-74/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-75",
+      "pattern": "^https://app\\.acme\\.com/section-75/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-76",
+      "pattern": "^https://app\\.acme\\.com/section-76/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-77",
+      "pattern": "^https://app\\.acme\\.com/section-77/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-78",
+      "pattern": "^https://app\\.acme\\.com/section-78/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-79",
+      "pattern": "^https://app\\.acme\\.com/section-79/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-80",
+      "pattern": "^https://app\\.acme\\.com/section-80/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-81",
+      "pattern": "^https://app\\.acme\\.com/section-81/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-82",
+      "pattern": "^https://app\\.acme\\.com/section-82/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-83",
+      "pattern": "^https://app\\.acme\\.com/section-83/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-84",
+      "pattern": "^https://app\\.acme\\.com/section-84/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-85",
+      "pattern": "^https://app\\.acme\\.com/section-85/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-86",
+      "pattern": "^https://app\\.acme\\.com/section-86/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-87",
+      "pattern": "^https://app\\.acme\\.com/section-87/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-88",
+      "pattern": "^https://app\\.acme\\.com/section-88/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-89",
+      "pattern": "^https://app\\.acme\\.com/section-89/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-90",
+      "pattern": "^https://app\\.acme\\.com/section-90/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-91",
+      "pattern": "^https://app\\.acme\\.com/section-91/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-92",
+      "pattern": "^https://app\\.acme\\.com/section-92/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-93",
+      "pattern": "^https://app\\.acme\\.com/section-93/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-94",
+      "pattern": "^https://app\\.acme\\.com/section-94/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-95",
+      "pattern": "^https://app\\.acme\\.com/section-95/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-96",
+      "pattern": "^https://app\\.acme\\.com/section-96/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-97",
+      "pattern": "^https://app\\.acme\\.com/section-97/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-98",
+      "pattern": "^https://app\\.acme\\.com/section-98/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-99",
+      "pattern": "^https://app\\.acme\\.com/section-99/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-100",
+      "pattern": "^https://app\\.acme\\.com/section-100/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-101",
+      "pattern": "^https://app\\.acme\\.com/section-101/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-102",
+      "pattern": "^https://app\\.acme\\.com/section-102/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-103",
+      "pattern": "^https://app\\.acme\\.com/section-103/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-104",
+      "pattern": "^https://app\\.acme\\.com/section-104/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-105",
+      "pattern": "^https://app\\.acme\\.com/section-105/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-106",
+      "pattern": "^https://app\\.acme\\.com/section-106/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-107",
+      "pattern": "^https://app\\.acme\\.com/section-107/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-108",
+      "pattern": "^https://app\\.acme\\.com/section-108/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-109",
+      "pattern": "^https://app\\.acme\\.com/section-109/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-110",
+      "pattern": "^https://app\\.acme\\.com/section-110/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-111",
+      "pattern": "^https://app\\.acme\\.com/section-111/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-112",
+      "pattern": "^https://app\\.acme\\.com/section-112/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-113",
+      "pattern": "^https://app\\.acme\\.com/section-113/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-114",
+      "pattern": "^https://app\\.acme\\.com/section-114/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-115",
+      "pattern": "^https://app\\.acme\\.com/section-115/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-116",
+      "pattern": "^https://app\\.acme\\.com/section-116/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-117",
+      "pattern": "^https://app\\.acme\\.com/section-117/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-118",
+      "pattern": "^https://app\\.acme\\.com/section-118/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-119",
+      "pattern": "^https://app\\.acme\\.com/section-119/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-120",
+      "pattern": "^https://app\\.acme\\.com/section-120/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-121",
+      "pattern": "^https://app\\.acme\\.com/section-121/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-122",
+      "pattern": "^https://app\\.acme\\.com/section-122/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-123",
+      "pattern": "^https://app\\.acme\\.com/section-123/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-124",
+      "pattern": "^https://app\\.acme\\.com/section-124/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-125",
+      "pattern": "^https://app\\.acme\\.com/section-125/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-126",
+      "pattern": "^https://app\\.acme\\.com/section-126/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-127",
+      "pattern": "^https://app\\.acme\\.com/section-127/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-128",
+      "pattern": "^https://app\\.acme\\.com/section-128/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-129",
+      "pattern": "^https://app\\.acme\\.com/section-129/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-130",
+      "pattern": "^https://app\\.acme\\.com/section-130/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-131",
+      "pattern": "^https://app\\.acme\\.com/section-131/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-132",
+      "pattern": "^https://app\\.acme\\.com/section-132/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-133",
+      "pattern": "^https://app\\.acme\\.com/section-133/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-134",
+      "pattern": "^https://app\\.acme\\.com/section-134/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-135",
+      "pattern": "^https://app\\.acme\\.com/section-135/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-136",
+      "pattern": "^https://app\\.acme\\.com/section-136/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-137",
+      "pattern": "^https://app\\.acme\\.com/section-137/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-138",
+      "pattern": "^https://app\\.acme\\.com/section-138/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-139",
+      "pattern": "^https://app\\.acme\\.com/section-139/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-140",
+      "pattern": "^https://app\\.acme\\.com/section-140/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-141",
+      "pattern": "^https://app\\.acme\\.com/section-141/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-142",
+      "pattern": "^https://app\\.acme\\.com/section-142/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-143",
+      "pattern": "^https://app\\.acme\\.com/section-143/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-144",
+      "pattern": "^https://app\\.acme\\.com/section-144/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-145",
+      "pattern": "^https://app\\.acme\\.com/section-145/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-146",
+      "pattern": "^https://app\\.acme\\.com/section-146/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-147",
+      "pattern": "^https://app\\.acme\\.com/section-147/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-148",
+      "pattern": "^https://app\\.acme\\.com/section-148/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-149",
+      "pattern": "^https://app\\.acme\\.com/section-149/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-150",
+      "pattern": "^https://app\\.acme\\.com/section-150/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-151",
+      "pattern": "^https://app\\.acme\\.com/section-151/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-152",
+      "pattern": "^https://app\\.acme\\.com/section-152/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-153",
+      "pattern": "^https://app\\.acme\\.com/section-153/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-154",
+      "pattern": "^https://app\\.acme\\.com/section-154/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-155",
+      "pattern": "^https://app\\.acme\\.com/section-155/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-156",
+      "pattern": "^https://app\\.acme\\.com/section-156/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-157",
+      "pattern": "^https://app\\.acme\\.com/section-157/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-158",
+      "pattern": "^https://app\\.acme\\.com/section-158/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-159",
+      "pattern": "^https://app\\.acme\\.com/section-159/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-160",
+      "pattern": "^https://app\\.acme\\.com/section-160/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-161",
+      "pattern": "^https://app\\.acme\\.com/section-161/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-162",
+      "pattern": "^https://app\\.acme\\.com/section-162/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-163",
+      "pattern": "^https://app\\.acme\\.com/section-163/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-164",
+      "pattern": "^https://app\\.acme\\.com/section-164/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-165",
+      "pattern": "^https://app\\.acme\\.com/section-165/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-166",
+      "pattern": "^https://app\\.acme\\.com/section-166/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-167",
+      "pattern": "^https://app\\.acme\\.com/section-167/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-168",
+      "pattern": "^https://app\\.acme\\.com/section-168/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-169",
+      "pattern": "^https://app\\.acme\\.com/section-169/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-170",
+      "pattern": "^https://app\\.acme\\.com/section-170/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-171",
+      "pattern": "^https://app\\.acme\\.com/section-171/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-172",
+      "pattern": "^https://app\\.acme\\.com/section-172/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-173",
+      "pattern": "^https://app\\.acme\\.com/section-173/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-174",
+      "pattern": "^https://app\\.acme\\.com/section-174/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-175",
+      "pattern": "^https://app\\.acme\\.com/section-175/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-176",
+      "pattern": "^https://app\\.acme\\.com/section-176/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-177",
+      "pattern": "^https://app\\.acme\\.com/section-177/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-178",
+      "pattern": "^https://app\\.acme\\.com/section-178/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-179",
+      "pattern": "^https://app\\.acme\\.com/section-179/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-180",
+      "pattern": "^https://app\\.acme\\.com/section-180/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-181",
+      "pattern": "^https://app\\.acme\\.com/section-181/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-182",
+      "pattern": "^https://app\\.acme\\.com/section-182/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-183",
+      "pattern": "^https://app\\.acme\\.com/section-183/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-184",
+      "pattern": "^https://app\\.acme\\.com/section-184/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-185",
+      "pattern": "^https://app\\.acme\\.com/section-185/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-186",
+      "pattern": "^https://app\\.acme\\.com/section-186/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-187",
+      "pattern": "^https://app\\.acme\\.com/section-187/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-188",
+      "pattern": "^https://app\\.acme\\.com/section-188/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-189",
+      "pattern": "^https://app\\.acme\\.com/section-189/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-190",
+      "pattern": "^https://app\\.acme\\.com/section-190/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-191",
+      "pattern": "^https://app\\.acme\\.com/section-191/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-192",
+      "pattern": "^https://app\\.acme\\.com/section-192/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-193",
+      "pattern": "^https://app\\.acme\\.com/section-193/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-194",
+      "pattern": "^https://app\\.acme\\.com/section-194/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-195",
+      "pattern": "^https://app\\.acme\\.com/section-195/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-196",
+      "pattern": "^https://app\\.acme\\.com/section-196/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-197",
+      "pattern": "^https://app\\.acme\\.com/section-197/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-198",
+      "pattern": "^https://app\\.acme\\.com/section-198/",
+      "action": "internal"
+    },
+    {
+      "id": "rule-199",
+      "pattern": "^https://app\\.acme\\.com/section-199/",
+      "action": "internal"
+    },
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+# Secret scanning. Beyond the default ruleset we add the shapes specific to this
+# product: Apple signing material and Google service accounts. A leak of any of
+# these is, per the master spec §1.4, company-ending.
+title = "Shellwright gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "apple-p8-private-key"
+description = "Apple App Store Connect API key (.p8 / PKCS#8 private key)"
+regex = '''-----BEGIN PRIVATE KEY-----'''
+tags = ["apple", "signing", "key"]
+
+[[rules]]
+id = "apple-p12-marker"
+description = "PKCS#12 signing certificate committed as text"
+regex = '''-----BEGIN (ENCRYPTED |RSA |EC )?PRIVATE KEY-----'''
+tags = ["apple", "signing", "key"]
+
+[[rules]]
+id = "apple-asc-key-id"
+description = "App Store Connect key identifier alongside an issuer id"
+regex = '''(?i)(asc|appstoreconnect)[_-]?(key[_-]?id|issuer[_-]?id)\s*[:=]\s*['"]?[A-Z0-9]{8,10}['"]?'''
+tags = ["apple", "asc"]
+
+[[rules]]
+id = "google-service-account-json"
+description = "Google service account key JSON"
+regex = '''"type"\s*:\s*"service_account"'''
+tags = ["google", "play", "key"]
+
+[[rules]]
+id = "android-keystore-password"
+description = "Android keystore or key password in a properties file"
+regex = '''(?i)(store|key)Password\s*[:=]\s*['"]?[^\s'"]{4,}'''
+path = '''\.(properties|gradle|kts)$'''
+tags = ["android", "signing"]
+
+[allowlist]
+description = """
+Two kinds of file trip the scanner without carrying a secret.
+
+The CFG_SECRET_IN_CONFIG rule detects credentials pasted into a configuration,
+and testing a credential detector requires strings shaped like credentials, so
+those files carry deliberately fake test vectors — published example values such
+as AKIAIOSFODNN7EXAMPLE, or obvious filler. None is or ever was live.
+
+The generation manifests in the golden corpus carry the three BLAKE3 cache keys
+from ADR 0004. A 64-character hex value under a field named "codeKey" is exactly
+what generic-api-key is built to find, and it is right to look — these simply
+are not secrets. They are digests of public fixture configs, reproducible by
+anyone with the repository, and they are named "key" because that is what the
+build cache calls them.
+
+⚠️ The path pattern accepts any depth under generated/, which is not laziness:
+gitleaks in CI scans git *history*, not just the working tree, and the corpus
+gained a platform directory partway through Sprint 05. A pattern pinned to
+today's depth stops matching yesterday's commits, and the job fails on files
+that have not existed for hours. Matching every depth under that one directory
+is both narrower than it looks and stable against the corpus being reorganised
+again.
+
+⚠️ Only the manifest itself is allowed, not the tree around it. The generated
+appconfig.json beside it is still scanned, and so is every fixture config it was
+generated from — a real credential in a fixture would still be caught twice.
+
+The log-redaction corpus is the same bargain in the other direction: it is a
+file of deliberately fake credentials, in every shape a build tool has been seen
+to print, and the redactor is tested against it. It has to look exactly like the
+real thing to be worth anything, which is precisely why the scanner objects.
+
+⚠️ One file, and the redaction tests deliberately read their credential shapes
+out of it rather than inlining them. Inlining one in a .cs file would mean
+allowlisting a source file — and a source file is where a real credential
+actually ends up.
+
+Scoped to exact paths on purpose. A directory-wide or extension-wide exclusion
+here would be the hole the next real leak walks through.
+"""
+paths = [
+  '''^tests/fixtures/configs/invalid-CFG_SECRET_IN_CONFIG\.json$''',
+  '''^tests/fixtures/expected/.*\.json$''',
+  '''^packages/config-schema/src/rules/secret-rules\.ts$''',
+  '''^packages/config-schema/test/rules\.test\.ts$''',
+  '''^packages/config-schema/dotnet/Shellwright\.ConfigSchema/Rules/SecretRules\.cs$''',
+  '''^docs/reference/diagnostics\.md$''',
+  '''^\.gitleaks\.toml$''',
+  '''^tests/fixtures/generated/(?:[^/]+/)+files/\.shellwright/manifest\.json$''',
+  '''^tests/fixtures/log-redaction/leaky-output\.json$''',
+]

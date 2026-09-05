@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# Brings up a Postgres suitable for running the API's integration tests, and
+# prints the two connection strings they need.
+#
+# The control plane's isolation guarantee is a *database* guarantee: row-level
+# security, a migration role that owns the schema, and an application role that
+# owns nothing and cannot bypass a policy. None of that can be exercised against
+# an in-memory provider or a mock, so the tests need a real server. This script
+# is how you get one without installing anything global.
+#
+#   eval "$(bash scripts/dev-postgres.sh)"     # start, print exports
+#   bash scripts/dev-postgres.sh --stop        # shut it down
+#
+# In CI, where Postgres is already running as a service container, set
+# SHELLWRIGHT_PG_ADMIN to its superuser connection string and this script only
+# creates the roles and database.
+set -uo pipefail
+
+port="${SHELLWRIGHT_PG_PORT:-55432}"
+database="${SHELLWRIGHT_PG_DATABASE:-shellwright_test}"
+
+# ⚠️ The data directory depends on who is running, and getting this wrong is
+# how the nightly build broke: /var/lib/postgresql is writable only by root and
+# by the postgres account, so an ordinary user — a developer on their laptop,
+# or the `runner` account on a GitHub runner — could not create it and the
+# whole suite failed at initdb with "Permission denied".
+#
+# As root the server cannot run as root either, so it has to be handed to the
+# postgres account, and the directory has to live somewhere that account owns.
+# As anyone else, the caller runs the server themselves and any directory they
+# own will do.
+if [[ -n "${SHELLWRIGHT_PG_DATA:-}" ]]; then
+	data="$SHELLWRIGHT_PG_DATA"
+elif [[ "$(id -u)" -eq 0 ]]; then
+	data="/var/lib/postgresql/shellwright-test"
+else
+	data="${TMPDIR:-/tmp}/shellwright-pg-$(id -u)"
+fi
+
+say() { printf '%s\n' "$1" >&2; }
+
+# ⚠️ Starting the cluster is a check-then-act, and two test suites run it at
+# the same time.
+#
+# `dotnet test` on the solution runs its projects in parallel, so the API suite
+# and the orchestrator suite both reach this script within milliseconds of each
+# other. Both see no cluster running, both call pg_ctl, one wins the postmaster
+# lock and the other exits 1 — and every test in the losing suite fails with
+# "pg_ctl failed", which reads exactly like a broken fixture rather than like
+# two scripts fighting. It broke the nightly build, intermittently, for as long
+# as there have been two suites.
+#
+# mkdir rather than flock: it is atomic on every POSIX filesystem and needs no
+# util-linux, so this behaves the same on a developer's Mac as on a runner.
+#
+# Keyed on the port rather than the data directory, because the port is what
+# identifies the cluster, and the cluster is what is contended — including by
+# the role creation below, which runs even when the server is a CI service
+# container and no data directory is ours at all.
+lock="${TMPDIR:-/tmp}/shellwright-pg-$port.lock"
+
+release_lock() { rmdir "$lock" 2>/dev/null || true; }
+
+acquire_lock() {
+	local waited=0
+
+	until mkdir "$lock" 2>/dev/null; do
+		# A lock left behind by a killed process would otherwise block every
+		# future run for ever, which is a worse failure than the race.
+		if [[ -n "$(find "$lock" -maxdepth 0 -mmin +5 2>/dev/null)" ]]; then
+			say "Removing a stale lock at $lock"
+			rmdir "$lock" 2>/dev/null || true
+			continue
+		fi
+
+		sleep 1
+		waited=$((waited + 1))
+
+		if [[ "$waited" -gt 120 ]]; then
+			say "Timed out waiting for $lock. Remove it if no other run is starting Postgres."
+			return 1
+		fi
+	done
+
+	trap release_lock EXIT
+	return 0
+}
+
+find_bindir() {
+	if command -v initdb >/dev/null 2>&1; then
+		dirname "$(command -v initdb)"
+		return 0
+	fi
+
+	# Debian and Ubuntu keep the server binaries off PATH on purpose, so that
+	# several major versions can be installed side by side.
+	local candidate
+	candidate=$(find /usr/lib/postgresql -maxdepth 3 -name initdb -type f 2>/dev/null | sort -V | tail -1)
+	if [[ -n "$candidate" ]]; then
+		dirname "$candidate"
+		return 0
+	fi
+
+	return 1
+}
+
+# Postgres refuses to run as root, which is exactly the environment a container
+# hands you. Run the server as the unprivileged `postgres` account when we have
+# to, and as the caller otherwise.
+run_pg() {
+	if [[ "$(id -u)" -eq 0 ]]; then
+		su postgres -s /bin/bash -c "$1"
+	else
+		bash -c "$1"
+	fi
+}
+
+stop() {
+	local bindir
+	bindir=$(find_bindir) || { say "No Postgres server binaries found."; exit 1; }
+	run_pg "$bindir/pg_ctl -D $data stop -m fast" >&2 2>/dev/null \
+		&& say "Stopped." \
+		|| say "Not running."
+}
+
+if [[ "${1:-}" == "--stop" ]]; then
+	stop
+	exit 0
+fi
+
+admin="${SHELLWRIGHT_PG_ADMIN:-}"
+
+# ⚠️ Held for the rest of the script, not just across the start. The three roles
+# are cluster-wide and their creation is a check-then-act too: two suites racing
+# there both see the role missing and one fails with "role already exists".
+acquire_lock || exit 1
+
+if [[ -z "$admin" ]]; then
+	bindir=$(find_bindir) || {
+		say "No Postgres server binaries found. Install postgresql-16 or set SHELLWRIGHT_PG_ADMIN."
+		exit 1
+	}
+
+	# Re-checked inside the lock. The whole point of the lock is that the
+	# answer can have changed between the caller arriving and getting in.
+	if ! run_pg "$bindir/pg_ctl -D $data status" >/dev/null 2>&1; then
+		if [[ ! -s "$data/PG_VERSION" ]]; then
+			say "Initialising a cluster in $data"
+
+			if ! mkdir -p "$data"; then
+				say "Cannot create $data. Set SHELLWRIGHT_PG_DATA to a directory you can write."
+				exit 1
+			fi
+
+			[[ "$(id -u)" -eq 0 ]] && chown postgres:postgres "$data"
+			chmod 700 "$data"
+			run_pg "$bindir/initdb -D $data -U postgres --auth=trust -E UTF8 --locale=C" >/dev/null 2>&1 || {
+				say "initdb failed."
+				exit 1
+			}
+		fi
+
+		say "Starting Postgres on port $port"
+		run_pg "$bindir/pg_ctl -D $data -o '-p $port -k /tmp -c listen_addresses=127.0.0.1' -l $data/server.log start" >/dev/null 2>&1 || {
+			# Belt and braces: if a stale lock was cleared above, somebody else
+			# may still have started it. A cluster that is up is the outcome we
+			# wanted, however it got there.
+			if ! run_pg "$bindir/pg_ctl -D $data status" >/dev/null 2>&1; then
+				say "pg_ctl failed; see $data/server.log"
+				exit 1
+			fi
+		}
+	fi
+
+	admin="Host=127.0.0.1;Port=$port;Database=postgres;Username=postgres"
+fi
+
+# psql wants a URI, the .NET side wants a keyword string. Parse the few fields
+# we care about rather than depending on a converter.
+field() { sed -n "s/.*[;^]\?$1=\([^;]*\).*/\1/Ip" <<<"$admin" | head -1; }
+host=$(field Host); host="${host:-127.0.0.1}"
+pgport=$(field Port); pgport="${pgport:-5432}"
+adminuser=$(field Username); adminuser="${adminuser:-postgres}"
+adminpass=$(field Password)
+
+export PGPASSWORD="$adminpass"
+psql_admin() { psql -h "$host" -p "$pgport" -U "$adminuser" -d postgres -v ON_ERROR_STOP=1 -qtA "$@"; }
+
+for _ in $(seq 1 30); do
+	psql_admin -c 'SELECT 1' >/dev/null 2>&1 && break
+	sleep 1
+done
+
+if ! psql_admin -c 'SELECT 1' >/dev/null 2>&1; then
+	say "Could not reach Postgres at $host:$pgport."
+	exit 1
+fi
+
+# ⚠️ The three roles are the point of this script, not an incidental detail.
+#
+#   shellwright_migrator owns every table and applies every migration.
+#   shellwright_app owns nothing, holds no BYPASSRLS, and is what the API runs
+#   as. A deployment that collapses these two into one looks identical from the
+#   outside and has no tenant isolation whatsoever, because a table's owner is
+#   not subject to its own policies.
+#   shellwright_runner is what the build orchestrator runs as. It acts for no
+#   particular user — it runs builds for everybody — so it cannot be scoped by
+#   membership, and its policies say so in the open rather than by handing it
+#   BYPASSRLS. What bounds it instead is the grant list: the build tables and
+#   the configurations it must compile, and nothing else. It cannot read a user,
+#   an organisation, an API token, or a refresh token at all.
+psql_admin <<SQL >/dev/null
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_migrator') THEN
+        CREATE ROLE shellwright_migrator LOGIN PASSWORD 'shellwright_migrator' NOBYPASSRLS;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_app') THEN
+        CREATE ROLE shellwright_app LOGIN PASSWORD 'shellwright_app' NOBYPASSRLS NOINHERIT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_runner') THEN
+        CREATE ROLE shellwright_runner LOGIN PASSWORD 'shellwright_runner' NOBYPASSRLS NOINHERIT;
+    END IF;
+EXCEPTION
+    -- Defence in depth behind the lock above. CREATE ROLE is not atomic with
+    -- its own existence check, so a caller that got here without the lock must
+    -- not turn "somebody else already made it" into a failed test run.
+    WHEN duplicate_object THEN NULL;
+END
+\$\$;
+SQL
+
+if [[ "$(psql_admin -c "SELECT count(*) FROM pg_database WHERE datname = '$database'")" == "0" ]]; then
+	psql_admin -c "CREATE DATABASE $database OWNER shellwright_migrator" >/dev/null
+fi
+
+# The migrator owns the schema; the application role may use it and nothing more.
+# CREATE on the public schema is revoked so that a compromised application role
+# cannot define a table of its own — one with no policy on it.
+psql -h "$host" -p "$pgport" -U "$adminuser" -d "$database" -v ON_ERROR_STOP=1 -qtA >/dev/null <<SQL
+ALTER SCHEMA public OWNER TO shellwright_migrator;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO shellwright_app;
+GRANT USAGE ON SCHEMA public TO shellwright_runner;
+SQL
+
+base="Host=$host;Port=$pgport;Database=$database"
+echo "export SHELLWRIGHT_TEST_PG_APP='$base;Username=shellwright_app;Password=shellwright_app'"
+echo "export SHELLWRIGHT_TEST_PG_MIGRATOR='$base;Username=shellwright_migrator;Password=shellwright_migrator'"
+echo "export SHELLWRIGHT_TEST_PG_RUNNER='$base;Username=shellwright_runner;Password=shellwright_runner'"
+echo "export SHELLWRIGHT_TEST_PG_ADMIN='Host=$host;Port=$pgport;Database=postgres;Username=$adminuser${adminpass:+;Password=$adminpass}'"
+release_lock
+trap - EXIT
+
+say "Ready: $database on $host:$pgport"

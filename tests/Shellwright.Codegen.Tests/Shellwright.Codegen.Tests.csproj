@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Shellwright.Codegen.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Tests describe behaviour; documenting every fact class adds nothing. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1707;CA2007;CA1861;CA1515</NoWarn>
+    <!-- The generator NFC-normalises; the tests assert it actually happened. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../services/codegen/Shellwright.Codegen/Shellwright.Codegen.csproj" />
+    <!-- The golden tests and the approval tool must agree about what a snapshot
+         is. Sharing the code is the only way to guarantee it: a corpus where
+         "what CI checks" and "what the tool writes" have drifted is worse than
+         no corpus, because it still looks like review. -->
+    <ProjectReference Include="../../tools/ApproveGolden/ApproveGolden.csproj" />
+  </ItemGroup>
+
+</Project>

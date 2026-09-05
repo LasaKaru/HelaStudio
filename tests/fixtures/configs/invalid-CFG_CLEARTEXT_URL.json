@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Cleartext",
+    "bundleId": "dev.shellwright.cleartext",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "nativeSurfaces": [
+    {
+      "id": "welcome",
+      "type": "onboarding",
+      "config": {
+        "learnMoreUrl": "http://acme.com/help"
+      }
+    }
+  ]
+}

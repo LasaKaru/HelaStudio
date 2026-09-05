@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Acme\u0000 Orders",
+    "bundleId": "dev.shellwright.controlchar",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders\u000bToday",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ]
+}

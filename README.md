@@ -7,18 +7,60 @@ JavaScript bridge that lets the website drive real device capability.
 The user never installs Xcode, never touches a certificate, and never learns
 Swift or Kotlin.
 
-## Status
+**Status:** Phase 1, Sprint 06. The configuration schema, the validation engine,
+both native shells, code generation for both platforms, and the multi-tenant
+control plane are built. The remaining Sprint 03 criteria are the M1 kill gate —
+one app on TestFlight and on Play internal testing — and are blocked on
+developer-account enrolment and physical devices rather than on code. See
+[`ACTION_REQUIRED.md`](ACTION_REQUIRED.md).
 
-Repository initialised. Development lands here through pull requests, sprint by
-sprint, against the plan in `00_MASTER_SPRINT_PLAN.md`.
+An `appconfig.json` generates complete Android **and** iOS projects, with icons
+rendered from one uploaded source, and the API stores those configurations as
+immutable content-addressed versions behind row-level security. The Android
+project builds into a real 848 kB APK.
 
-| Phase | Sprints | Milestone |
-|---|---|---|
-| 0 — Proof | S00–S03 | A config JSON puts an app on a real phone via TestFlight and Play internal testing |
-| 1 — Pipeline | S04–S08 | A config submitted by API produces signed artifacts on cloud runners |
-| 1 — Product | S09–S12 | Private alpha: ten external users build and install their own app |
-| 2 — Beta | S13–S19 | Public beta: self-serve signup through to store submission |
-| 3 — Commercial | S20–S26 | GA: first-party push, analytics, OTA, offline, agency tier |
+⚠️ Two things are unproven rather than done. The iOS generator has never met a
+real toolchain — nothing here runs `xcodebuild` — so it stays unproven until the
+Codemagic `ios-verify` workflow runs. And the API's OAuth flow has never
+completed a real authorisation code exchange, because that needs live
+credentials at both providers.
+
+## Run it locally
+
+Needs Node 22, pnpm 10, and the .NET 10 SDK.
+
+```bash
+pnpm install
+pnpm build          # config schema, then the studio
+pnpm test           # 241 TypeScript tests
+dotnet test         # 720 C# tests, including the cross-language contract
+pnpm verify         # everything CI runs, the way CI runs it
+pnpm --filter @shellwright/studio dev   # the studio on http://localhost:5173
+```
+
+⚠️ `dotnet test` needs a real PostgreSQL for the control plane's suite, and the
+fixture starts one itself if the connection strings are not already in the
+environment. There is no in-memory substitute: what those tests assert — that a
+policy denies a row, that a role cannot `UPDATE` a table — are properties of
+PostgreSQL, and a fake would agree with whatever we claimed. Bring one up by
+hand with `bash scripts/dev-postgres.sh` if you would rather.
+
+## What is here
+
+| Path                            | What it is                                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/config-schema`        | `appconfig.json` v1 — schema, validation, canonicalisation, hashing, migration. TypeScript and C#, held identical by a contract test. |
+| `apps/studio`                   | The browser app. Today it validates a pasted configuration; Sprint 11 turns it into the visual editors.                               |
+| `apps/api`                      | The control plane: identity, organisations, apps, and immutable config versions, isolated by row-level security. Sprint 06.           |
+| `packages/api-client`           | TypeScript types generated from the API's own OpenAPI document. Nothing here is written by hand.                                      |
+| `services/orchestrator`         | Build orchestration. Sprint 07.                                                                                                       |
+| `shells/android`, `shells/ios`  | The native runtimes. Separate public repositories — see ADR 0002. Sprints 02 and 03.                                                  |
+| `tests/fixtures/configs`        | 32 configurations: valid, edge, and one per diagnostic code.                                                                          |
+| `tests/load`                    | k6 scripts behind the performance budgets. See `docs/perf/baseline-s06.md`.                                                           |
+| `tests/fixtures/expected`       | The goldens both validators must reproduce byte for byte.                                                                             |
+| `tests/fixtures/sites`          | Three controlled websites to point the shells at.                                                                                     |
+| `docs/adr`                      | Why the one-way doors were decided the way they were.                                                                                 |
+| `docs/reference/diagnostics.md` | Every diagnostic code, what it means, how to fix it.                                                                                  |
 
 ## The idea in one paragraph
 
@@ -29,7 +71,13 @@ strategy here inverts that. Every software capability is free — every plugin,
 watermark-free builds, unlimited seats, full source export. Revenue comes from
 what genuinely costs something: iOS build and simulator minutes beyond a
 generous allowance, first-party push and analytics at volume, managed
-publishing, and enterprise controls.
+publishing, and enterprise controls. See `SHELLWRIGHT_MASTER_SPEC.md`.
 
-The full analysis is in `SHELLWRIGHT_MASTER_SPEC.md`, which arrives with the
-first pull request.
+## Working on it
+
+Read `01_ENGINEERING_STANDARDS.md` before writing code, and its §9 review
+checklist before every merge. `03_TEST_STRATEGY.md` defines what the test IDs
+mean and what gates CI. Each sprint's exit criteria live in its own file under
+`sprints/`; they are not softened mid-sprint.
+
+Contributing conventions are in `CONTRIBUTING.md`.

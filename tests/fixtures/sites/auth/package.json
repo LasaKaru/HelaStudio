@@ -1,0 +1,9 @@
+{
+  "name": "@shellwright/fixture-auth",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Static fixture site. Served as-is; nothing to build, lint, or test on its own.",
+  "scripts": {
+    "dev": "node ../serve.mjs public 4312"
+  }
+}

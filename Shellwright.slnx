@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/packages/" />
+  <Folder Name="/packages/config-schema/" />
+  <Folder Name="/packages/config-schema/dotnet/">
+    <Project Path="packages/config-schema/dotnet/Shellwright.ConfigSchema/Shellwright.ConfigSchema.csproj" />
+  </Folder>
+  <Folder Name="/apps/">
+    <Project Path="apps/api/Shellwright.Api/Shellwright.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/">
+    <Project Path="services/codegen/Shellwright.Codegen/Shellwright.Codegen.csproj" />
+    <Project Path="services/orchestrator/Shellwright.Orchestrator/Shellwright.Orchestrator.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ApproveGolden/ApproveGolden.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Shellwright.ConfigSchema.Tests/Shellwright.ConfigSchema.Tests.csproj" />
+    <Project Path="tests/Shellwright.Codegen.Tests/Shellwright.Codegen.Tests.csproj" />
+    <Project Path="tests/Shellwright.Api.Tests/Shellwright.Api.Tests.csproj" />
+    <Project Path="tests/Shellwright.Orchestrator.Tests/Shellwright.Orchestrator.Tests.csproj" />
+  </Folder>
+</Solution>

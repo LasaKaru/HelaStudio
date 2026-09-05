@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Shellwright.Orchestrator.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- CA1062 asks for null checks on public parameters. These are test doubles
+         invoked only by Temporal with values this suite supplied. -->
+    <NoWarn>$(NoWarn);CA1707;CA2007;CA1861;CA1515;CA1062</NoWarn>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Temporalio.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Xunit.SkippableFact" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../services/orchestrator/Shellwright.Orchestrator/Shellwright.Orchestrator.csproj" />
+    <!-- ⚠️ Referenced only so BuildContractTests can compare the two enum sets. The
+         services do not reference each other at run time, and must not start. -->
+    <ProjectReference Include="../../apps/api/Shellwright.Api/Shellwright.Api.csproj" />
+  </ItemGroup>
+
+</Project>

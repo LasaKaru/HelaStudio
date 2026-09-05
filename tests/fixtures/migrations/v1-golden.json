@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Legacy Acme",
+    "bundleId": "com.acme.legacy",
+    "allowedOrigins": ["https://app.acme.com"],
+    "initialUrl": "https://app.acme.com/"
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [{ "id": "home", "label": "Home", "url": "/" }]
+    }
+  },
+  "linkRules": [
+    { "pattern": "^https://app\\.acme\\.com", "action": "internal", "id": "rule-1" },
+    { "pattern": ".*", "action": "externalBrowser", "id": "rule-2" }
+  ]
+}

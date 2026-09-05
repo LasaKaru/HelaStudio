@@ -1,0 +1,1978 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Shellwright control plane",
+    "description": "Organisations, apps, and immutable configuration versions.\n\nErrors are RFC 9457 problem documents. The `type` URI and the `code` extension are stable; the `title` and `detail` are for people and may be reworded.",
+    "version": "v1"
+  },
+  "paths": {
+    "/v1/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Create an account and send a verification link.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Exchange credentials for an access token and a refresh cookie.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Rotate the refresh cookie and issue a new access token.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke the current refresh family.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/verify-email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Redeem an emailed verification token.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/password/forgot": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Send a password reset link, if the address is known.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/password/reset": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Set a new password using an emailed token.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Describe the caller.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/oauth/{provider}": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Begin sign-in through an external identity provider.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/auth/oauth/{provider}/complete": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Finish an external sign-in and hand back a Shellwright session.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/orgs": {
+      "get": {
+        "tags": ["Organisations"],
+        "summary": "List the organisations the caller belongs to.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrgResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Organisations"],
+        "summary": "Create an organisation and become its owner.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/workspaces": {
+      "get": {
+        "tags": ["Organisations"],
+        "summary": "List an organisation's workspaces.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Organisations"],
+        "summary": "Create a workspace.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/members": {
+      "get": {
+        "tags": ["Organisations"],
+        "summary": "List an organisation's members.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/members/{userId}": {
+      "put": {
+        "tags": ["Organisations"],
+        "summary": "Grant or change a member's role.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMemberRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/tokens": {
+      "get": {
+        "tags": ["API tokens"],
+        "summary": "List an organisation's API tokens.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiTokenResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["API tokens"],
+        "summary": "Mint an API token and show the secret once.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedApiTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/tokens/{tokenId}": {
+      "delete": {
+        "tags": ["API tokens"],
+        "summary": "Revoke an API token.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/apps": {
+      "get": {
+        "tags": ["Apps"],
+        "summary": "List a workspace's apps.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Apps"],
+        "summary": "Create an app and seed its first configuration.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}": {
+      "get": {
+        "tags": ["Apps"],
+        "summary": "Describe an app.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/config": {
+      "get": {
+        "tags": ["Configuration"],
+        "summary": "Read the current resolved configuration.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Configuration"],
+        "summary": "Save a new configuration version.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/config/validate": {
+      "post": {
+        "tags": ["Configuration"],
+        "summary": "Validate without saving.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/config/versions": {
+      "get": {
+        "tags": ["Configuration"],
+        "summary": "List configuration versions, newest first.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfVersionSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/config/versions/{versionId}": {
+      "get": {
+        "tags": ["Configuration"],
+        "summary": "Read one version.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/config/diff": {
+      "get": {
+        "tags": ["Configuration"],
+        "summary": "Compare two versions.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiffResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/assets": {
+      "post": {
+        "tags": ["Assets"],
+        "summary": "Upload an image and get back an asset reference.",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/builds": {
+      "post": {
+        "tags": ["Builds"],
+        "summary": "Start a build. Requires an Idempotency-Key.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Builds"],
+        "summary": "List builds, newest first.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfBuildResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/builds/{buildId}": {
+      "get": {
+        "tags": ["Builds"],
+        "summary": "Read one build.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/builds/{buildId}/cancel": {
+      "post": {
+        "tags": ["Builds"],
+        "summary": "Ask a running build to stop.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/builds/{buildId}/artifact": {
+      "get": {
+        "tags": ["Builds"],
+        "summary": "Get a short-lived download link for a finished build.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{appId}/builds/{buildId}/artifact/download": {
+      "get": {
+        "tags": ["Builds"],
+        "summary": "Download an artifact using a signed link.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiTokenResponse": {
+        "required": ["id", "name", "prefix", "role", "workspaceId", "createdAt", "lastUsedAt"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Label."
+          },
+          "prefix": {
+            "type": "string",
+            "description": "Leading characters, enough to tell two tokens apart."
+          },
+          "role": {
+            "type": "string",
+            "description": "Ceiling on what it may do."
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Workspace it is confined to, if any.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was minted.",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "description": "Coarse last use.",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "description": "A token as listed. Never contains the secret."
+      },
+      "AppResponse": {
+        "required": ["id", "workspaceId", "name", "bundleId", "currentConfigVersionId", "createdAt"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Owning workspace.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "bundleId": {
+            "type": "string",
+            "description": "Reverse-DNS identifier."
+          },
+          "currentConfigVersionId": {
+            "type": "string",
+            "description": "The version considered live, if any.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation timestamp.",
+            "format": "date-time"
+          }
+        },
+        "description": "An app as the API reports it."
+      },
+      "ArtifactLinkResponse": {
+        "required": ["url", "expiresIn", "bytes"],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "A short-lived link."
+          },
+          "expiresIn": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many seconds it stays valid.",
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How large the download is.",
+            "format": "int64"
+          }
+        },
+        "description": "Where to fetch a finished artifact."
+      },
+      "AssetResponse": {
+        "required": ["reference", "contentType", "bytes", "width", "height", "hasAlpha", "deduplicated"],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "The `asset://sha256-…` reference to put in a configuration."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Media type, determined from the bytes."
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Size.",
+            "format": "int64"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Pixel width.",
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Pixel height.",
+            "format": "int32"
+          },
+          "hasAlpha": {
+            "type": "boolean",
+            "description": "Whether any pixel is not fully opaque."
+          },
+          "deduplicated": {
+            "type": "boolean",
+            "description": "True when these exact bytes were already stored."
+          }
+        },
+        "description": "An uploaded asset as the API reports it."
+      },
+      "BuildCacheOutcome": {
+        "enum": ["Miss", "Warm", "Patch", "Complete"],
+        "description": "How much of a previous build was reused."
+      },
+      "BuildPlatform": {
+        "enum": ["Android", "Ios"],
+        "description": "Which platform a build targets."
+      },
+      "BuildResponse": {
+        "required": [
+          "id",
+          "appId",
+          "configVersionId",
+          "platform",
+          "type",
+          "state",
+          "cacheOutcome",
+          "runnerSeconds",
+          "failureCode",
+          "failureMessage",
+          "artifactBytes",
+          "createdAt",
+          "startedAt",
+          "finishedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "appId": {
+            "type": "string",
+            "description": "Which app.",
+            "format": "uuid"
+          },
+          "configVersionId": {
+            "type": "string",
+            "description": "Exactly what was built.",
+            "format": "uuid"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/BuildPlatform"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BuildType"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BuildState"
+          },
+          "cacheOutcome": {
+            "$ref": "#/components/schemas/BuildCacheOutcome"
+          },
+          "runnerSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Metered runner time.",
+            "format": "int32"
+          },
+          "failureCode": {
+            "type": "string",
+            "description": "A stable code for why it failed, or null.",
+            "nullable": true
+          },
+          "failureMessage": {
+            "type": "string",
+            "description": "What a person can do about it, or null.",
+            "nullable": true
+          },
+          "artifactBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [null],
+                "nullable": true
+              }
+            ],
+            "description": "Size of what it produced, or null.",
+            "format": "int64",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was accepted.",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "When a runner picked it up, or null.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "description": "When it ended, or null.",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "description": "A build, as the API reports it."
+      },
+      "BuildState": {
+        "enum": ["Queued", "Generating", "Building", "Verifying", "Succeeded", "Failed", "Cancelled"],
+        "description": "Where a build has got to."
+      },
+      "BuildType": {
+        "enum": ["Debug", "Release"],
+        "description": "What kind of artifact a build produces."
+      },
+      "CallerResponse": {
+        "required": ["userId", "email", "scheme", "tokenId", "org"],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The authenticated subject.",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "description": "The subject's address, when the scheme carries one.",
+            "nullable": true
+          },
+          "scheme": {
+            "type": "string",
+            "description": "Which authentication scheme accepted the request.",
+            "nullable": true
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "The API token used, when one was.",
+            "nullable": true
+          },
+          "org": {
+            "type": "string",
+            "description": "The organisation an API token is confined to.",
+            "nullable": true
+          }
+        },
+        "description": "What the caller looks like to the API."
+      },
+      "ConfigChange": {
+        "required": ["path", "kind", "from", "to"],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "RFC 6901 JSON Pointer to the value."
+          },
+          "kind": {
+            "type": "string",
+            "description": "One of `added`, `removed`, or `changed`."
+          },
+          "from": {
+            "type": "string",
+            "description": "The previous value, canonicalised, or null when added.",
+            "nullable": true
+          },
+          "to": {
+            "type": "string",
+            "description": "The new value, canonicalised, or null when removed.",
+            "nullable": true
+          }
+        },
+        "description": "What changed at one location."
+      },
+      "CreateApiTokenRequest": {
+        "required": ["name"],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable label."
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrgRole"
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Workspace to confine it to, or null for the organisation.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "description": "Mint an API token."
+      },
+      "CreateAppRequest": {
+        "required": ["name", "bundleId", "initialUrl"],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name, also the name under the icon."
+          },
+          "bundleId": {
+            "type": "string",
+            "description": "Reverse-DNS identifier, shared by both platforms."
+          },
+          "initialUrl": {
+            "type": "string",
+            "description": "The first page the shell loads."
+          }
+        },
+        "description": "Create an app."
+      },
+      "CreatedApiTokenResponse": {
+        "required": ["token", "details"],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "⚠️ The only time the secret is ever available."
+          },
+          "details": {
+            "$ref": "#/components/schemas/ApiTokenResponse"
+          }
+        },
+        "description": "A token as returned once, at creation."
+      },
+      "CreateOrgRequest": {
+        "required": ["name", "slug"],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier, generated from the name when omitted.",
+            "nullable": true
+          }
+        },
+        "description": "Create an organisation."
+      },
+      "CreateWorkspaceRequest": {
+        "required": ["name", "slug"],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier, generated from the name when omitted.",
+            "nullable": true
+          }
+        },
+        "description": "Create a workspace."
+      },
+      "CredentialsRequest": {
+        "required": ["email", "password"],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Address."
+          },
+          "password": {
+            "type": "string",
+            "description": "Plaintext password."
+          }
+        },
+        "description": "Credentials in."
+      },
+      "DiagnosticResponse": {
+        "required": ["code", "severity", "path", "message", "docsUrl"],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable, documented, searchable code."
+          },
+          "severity": {
+            "type": "string",
+            "description": "Whether it blocks a save."
+          },
+          "path": {
+            "type": "string",
+            "description": "RFC 6901 JSON Pointer to the offending value."
+          },
+          "message": {
+            "type": "string",
+            "description": "User-facing text that names the fix."
+          },
+          "docsUrl": {
+            "type": "string",
+            "description": "Where to read more."
+          }
+        },
+        "description": "One finding, as the API reports it."
+      },
+      "DiffResponse": {
+        "required": ["from", "to", "changes"],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The earlier version.",
+            "format": "uuid"
+          },
+          "to": {
+            "type": "string",
+            "description": "The later version.",
+            "format": "uuid"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigChange"
+            },
+            "description": "What differs, ordered by path."
+          }
+        },
+        "description": "What a diff returned."
+      },
+      "EmailRequest": {
+        "required": ["email"],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Address."
+          }
+        },
+        "description": "An address, for the forgotten-password flow."
+      },
+      "JsonObject": {
+        "type": "object"
+      },
+      "MemberResponse": {
+        "required": ["userId", "email", "role"],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The member.",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Their address."
+          },
+          "role": {
+            "type": "string",
+            "description": "Their role."
+          }
+        },
+        "description": "A membership as the API reports it."
+      },
+      "OrgResponse": {
+        "required": ["id", "name", "slug", "plan", "role"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier."
+          },
+          "plan": {
+            "type": "string",
+            "description": "Billing plan."
+          },
+          "role": {
+            "type": "string",
+            "description": "The caller's effective role."
+          }
+        },
+        "description": "An organisation as the API reports it."
+      },
+      "OrgRole": {
+        "enum": ["Viewer", "Developer", "Admin", "Owner"],
+        "description": "Membership roles, ordered from least to most privileged.",
+        "default": "Developer"
+      },
+      "PageOfBuildResponse": {
+        "required": ["items", "nextCursor"],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildResponse"
+            },
+            "description": "The page."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass back as `cursor` for the following page, or null at the end.",
+            "nullable": true
+          }
+        },
+        "description": "A page of results."
+      },
+      "PageOfVersionSummary": {
+        "required": ["items", "nextCursor"],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionSummary"
+            },
+            "description": "The page."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass back as `cursor` for the following page, or null at the end.",
+            "nullable": true
+          }
+        },
+        "description": "A page of results."
+      },
+      "ResetPasswordRequest": {
+        "required": ["token", "password"],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret."
+          },
+          "password": {
+            "type": "string",
+            "description": "The new plaintext password."
+          }
+        },
+        "description": "A token and the password to set with it."
+      },
+      "SaveResponse": {
+        "required": ["version", "created", "warnings", "info"],
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VersionSummary"
+          },
+          "created": {
+            "type": "boolean",
+            "description": "False when an identical version already existed."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticResponse"
+            },
+            "description": "Findings that did not block the save."
+          },
+          "info": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticResponse"
+            },
+            "description": "Hints."
+          }
+        },
+        "description": "What a save returned."
+      },
+      "SessionResponse": {
+        "required": ["accessToken", "expiresAt", "userId", "email", "emailVerified"],
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Bearer token for subsequent requests."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "When it stops working.",
+            "format": "date-time"
+          },
+          "userId": {
+            "type": "string",
+            "description": "The signed-in account.",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "The account's address."
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "Whether the address has been proven."
+          }
+        },
+        "description": "What the studio gets back after signing in."
+      },
+      "SetMemberRoleRequest": {
+        "required": ["role"],
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/OrgRole"
+          }
+        },
+        "description": "Change somebody's role."
+      },
+      "StartBuildRequest": {
+        "required": ["platform", "type", "configVersionId"],
+        "type": "object",
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/BuildPlatform"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BuildType"
+          },
+          "configVersionId": {
+            "type": "string",
+            "description": "The exact version to build, or null for the app's current one.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "description": "What a caller asks for when starting a build."
+      },
+      "TokenRequest": {
+        "required": ["token"],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret."
+          }
+        },
+        "description": "A token from an emailed link."
+      },
+      "ValidationResponse": {
+        "required": ["valid", "errors", "warnings", "info"],
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "True when there are no errors."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticResponse"
+            },
+            "description": "Findings that block a save."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticResponse"
+            },
+            "description": "Findings allowed through."
+          },
+          "info": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticResponse"
+            },
+            "description": "Hints."
+          }
+        },
+        "description": "What a validate returned."
+      },
+      "VersionResponse": {
+        "required": ["version", "config"],
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VersionSummary"
+          },
+          "config": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        },
+        "description": "A configuration version, body included."
+      },
+      "VersionSummary": {
+        "required": ["id", "schemaVersion", "codeKey", "assetKey", "contentKey", "createdBy", "createdAt", "message"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "schemaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Schema version the body conforms to.",
+            "format": "int32"
+          },
+          "codeKey": {
+            "type": "string",
+            "description": "Cache key covering everything that forces a native recompile."
+          },
+          "assetKey": {
+            "type": "string",
+            "description": "Cache key covering everything that needs only a resource repackage."
+          },
+          "contentKey": {
+            "type": "string",
+            "description": "Cache key covering everything that needs only a config patch."
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Who saved it.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When.",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string",
+            "description": "Optional note.",
+            "nullable": true
+          }
+        },
+        "description": "A configuration version's identity, without its body."
+      },
+      "WorkspaceResponse": {
+        "required": ["id", "orgId", "name", "slug"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifier.",
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Owning organisation.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe identifier."
+          }
+        },
+        "description": "A workspace as the API reports it."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Organisations"
+    },
+    {
+      "name": "API tokens"
+    },
+    {
+      "name": "Apps"
+    },
+    {
+      "name": "Configuration"
+    },
+    {
+      "name": "Assets"
+    },
+    {
+      "name": "Builds"
+    }
+  ]
+}

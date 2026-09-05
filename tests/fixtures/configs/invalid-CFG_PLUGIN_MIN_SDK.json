@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Plugin Floor",
+    "bundleId": "dev.shellwright.pluginfloor",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "drawer": {
+      "enabled": true,
+      "items": [
+        {
+          "id": "home",
+          "label": "Home",
+          "url": "/"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "url": "/orders"
+        }
+      ]
+    }
+  },
+  "linkRules": [
+    {
+      "id": "fallback",
+      "pattern": ".*",
+      "action": "externalBrowser"
+    }
+  ],
+  "plugins": {
+    "document-scanner": {}
+  },
+  "permissions": {
+    "camera": true
+  },
+  "build": {
+    "android": {
+      "minSdk": 24
+    },
+    "ios": {
+      "minVersion": "16.0"
+    }
+  }
+}

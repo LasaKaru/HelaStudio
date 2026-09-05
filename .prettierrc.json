@@ -1,0 +1,12 @@
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "semi": true,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "overrides": [
+    { "files": ["*.json", "*.jsonc"], "options": { "printWidth": 120 } },
+    { "files": ["tests/fixtures/configs/*.json"], "options": { "printWidth": 120 } }
+  ]
+}

@@ -1,0 +1,34 @@
+is_global = true
+
+# Roslyn severities tuned for this codebase. AnalysisLevel=latest-all turns on
+# everything; this file turns down the rules that fight the house style, and
+# turns *up* the ones the standards document treats as non-negotiable.
+
+# §4 — never swallow an exception.
+dotnet_diagnostic.CA1031.severity = error
+# §10 — no string-concatenated process arguments (injection via app name / bundle id).
+dotnet_diagnostic.CA2100.severity = error
+# §2.8 — no unbounded allocation on user-controlled size.
+dotnet_diagnostic.CA1849.severity = error
+
+# Documentation of public API is a deliverable (§3), so missing docs is an error.
+dotnet_diagnostic.CS1591.severity = error
+
+# Noise: these fight records-as-DTOs and the minimal-API style.
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1812.severity = none
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA5394.severity = none
+dotnet_diagnostic.MA0004.severity = none
+
+# CA1054/CA1056 — "use System.Uri for URL-typed members".
+#
+# Suppressed deliberately, and only for this reason: every URL-shaped member in
+# this codebase crosses a JSON boundary and must serialise byte-identically to
+# the TypeScript implementation of the same contract (Diagnostic.docsUrl, config
+# URLs, asset references). System.Uri normalises what it round-trips — it
+# lowercases the host, resolves dot segments, and re-encodes reserved
+# characters — which would silently break the cross-language contract test and,
+# downstream, the build cache. Strings preserve exactly what the user wrote.
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1056.severity = none

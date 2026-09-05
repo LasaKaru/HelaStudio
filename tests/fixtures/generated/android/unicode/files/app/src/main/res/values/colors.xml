@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The splash background only. Every other colour comes from
+      config.branding.theme and is applied at runtime, so that a colour change
+      is a resource repackage rather than a recompile (ADR 0004).
+    -->
+    <color name="splash_background">#FFFFFF</color>
+</resources>

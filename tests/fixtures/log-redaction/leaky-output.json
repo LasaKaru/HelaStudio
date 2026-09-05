@@ -1,0 +1,80 @@
+[
+  {
+    "name": "gradle echoes its command line on failure",
+    "line": "> Task :app:validateSigningRelease FAILED\ncommand: ./gradlew assembleRelease -Pandroid.injected.signing.store.password=hunter2correct -Pandroid.injected.signing.key.alias=upload",
+    "mustNotContain": ["hunter2correct"]
+  },
+  {
+    "name": "a signing properties file echoed into the log",
+    "line": "storePassword=s3cr3t-store-value",
+    "mustNotContain": ["s3cr3t-store-value"]
+  },
+  {
+    "name": "key password on the same line as its alias",
+    "line": "keyAlias=upload keyPassword=another-s3cret here",
+    "mustNotContain": ["another-s3cret"]
+  },
+  {
+    "name": "a maven repository url carrying credentials",
+    "line": "Could not GET 'https://deploy:tr0ub4dor@nexus.internal/repo/thing.pom'",
+    "mustNotContain": ["tr0ub4dor"]
+  },
+  {
+    "name": "an authorization header logged by a plugin",
+    "line": "> HTTP request headers: Authorization: Bearer abcdefghijklmnop0123456789",
+    "mustNotContain": ["abcdefghijklmnop0123456789"]
+  },
+  {
+    "name": "basic authentication logged by a plugin",
+    "line": "Using credentials Basic ZGVwbG95OnRyMHViNGRvcg==",
+    "mustNotContain": ["ZGVwbG95OnRyMHViNGRvcg=="]
+  },
+  {
+    "name": "an api key printed by a crash reporting plugin",
+    "line": "Uploading mapping file with apiKey=abcd1234efgh5678ijkl",
+    "mustNotContain": ["abcd1234efgh5678ijkl"]
+  },
+  {
+    "name": "a private key block pasted into a gradle file",
+    "line": "-----BEGIN RSA PRIVATE KEY-----",
+    "mustNotContain": ["BEGIN RSA PRIVATE KEY"]
+  },
+  {
+    "name": "an aws key in a plugin's environment dump",
+    "line": "env: AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE region=eu-west-1",
+    "mustNotContain": ["AKIAIOSFODNN7EXAMPLE"]
+  },
+  {
+    "name": "a github token in a dependency url",
+    "line": "fatal: could not read from https://ghp_0123456789abcdefghij0123456789abcdefgh@github.com/acme/private.git",
+    "mustNotContain": ["ghp_0123456789abcdefghij0123456789abcdefgh"]
+  },
+  {
+    "name": "a google api key in a merged manifest",
+    "line": "  <meta-data android:name=\"com.google.android.geo.API_KEY\" android:value=\"AIzaSyA1234567890abcdefghijklmnopqrstuv\"/>",
+    "mustNotContain": ["AIzaSyA1234567890abcdefghijklmnopqrstuv"]
+  },
+  {
+    "name": "a json web token in a plugin's debug output",
+    "line": "response token eyJhbGciOiJIUzI1NiIs.eyJzdWIiOiIxMjM0NTY3ODkw.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+    "mustNotContain": ["dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"]
+  },
+  {
+    "name": "a keystore path is not a secret and stays readable",
+    "line": "Signing with keystore /workspace/keystore/upload.jks alias upload",
+    "mustNotContain": [],
+    "mustContain": ["/workspace/keystore/upload.jks", "upload"]
+  },
+  {
+    "name": "an ordinary compilation error is untouched",
+    "line": "e: file:///workspace/app/src/main/java/Main.kt:12:5 Unresolved reference: shellwright",
+    "mustNotContain": [],
+    "mustContain": ["Unresolved reference: shellwright"]
+  },
+  {
+    "name": "a version string that merely contains the word key",
+    "line": "> Using keystore-tools 1.4.0 from the plugin portal",
+    "mustNotContain": [],
+    "mustContain": ["keystore-tools 1.4.0"]
+  }
+]

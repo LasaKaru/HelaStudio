@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+{{~ if hasGeneratedIcon ~}}
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <!--
+      ⚠️ No <monochrome> layer when the icon is generated from a photograph or
+      logo. Android 13 themed icons derive their shape from the drawable's
+      alpha, so handing it a fully opaque bitmap produces a solid blob in the
+      user's chosen tint — visibly worse than the unthemed icon Android falls
+      back to when the layer is absent. A real monochrome layer needs artwork
+      the customer has not given us.
+    -->
+{{~ else ~}}
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+{{~ end ~}}
+</adaptive-icon>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Many Tabs</string>
+
+    <!--
+      User-facing copy. Written to be read by someone who does not know what a
+      WebView is, and to say what to do rather than what failed.
+    -->
+    <string name="offline_title">You are offline</string>
+    <string name="offline_body">This page needs a connection. It will load as soon as you are back online.</string>
+    <string name="offline_retry">Try again</string>
+
+    <string name="action_share">Share</string>
+    <string name="action_refresh">Reload</string>
+    <string name="action_search">Search</string>
+    <string name="action_back">Back</string>
+    <string name="action_menu">Menu</string>
+
+</resources>

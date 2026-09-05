@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "name": "Drawer Only",
+    "bundleId": "dev.shellwright.draweronly",
+    "initialUrl": "https://app.acme.com/",
+    "allowedOrigins": ["https://app.acme.com"]
+  },
+  "navigation": {
+    "tabBar": { "enabled": false },
+    "drawer": {
+      "enabled": true,
+      "items": [
+        { "id": "home", "label": "Home", "url": "/" },
+        { "id": "orders", "label": "Orders", "url": "/orders" },
+        { "id": "settings", "label": "Settings", "url": "/settings" }
+      ]
+    }
+  },
+  "linkRules": [{ "id": "fallback", "pattern": ".*", "action": "externalBrowser" }]
+}

@@ -1,0 +1,99 @@
+name: iOS shell
+
+# Split out from ci.yml for the same reason as Android: the toolchain is slow to
+# set up and irrelevant to most changes.
+on:
+  pull_request:
+    paths:
+      - 'shells/ios/**'
+      - 'tests/fixtures/configs/**'
+      - 'tests/fixtures/routing/**'
+      - 'tests/fixtures/regex-safety/**'
+      - '.github/workflows/ios.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'shells/ios/**'
+      - '.github/workflows/ios.yml'
+  # The macOS half is opt-in. See the comment on that job.
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Everything worth testing runs here, on free Linux minutes.
+  #
+  # This is the payoff for the ShellCore/ShellApp split (ADR 0005). ShellCore —
+  # config parsing, link routing, the origin allowlist, the backtracking check,
+  # user-agent composition — imports only Foundation and so builds and tests on
+  # Linux. That is where the logic lives, where the bugs live, and where the
+  # shared fixture corpora are asserted. ShellApp is the UIKit/WebKit layer and
+  # is the only part that genuinely needs a Mac.
+  core:
+    name: ShellCore build and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shells/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: shells/ios/.build
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('shells/ios/Package.swift') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Build
+        run: swift build
+
+      # Reads the shared corpora in tests/fixtures/, so iOS and Android can
+      # never disagree about where a link goes or which patterns are refused.
+      - name: Test
+        run: swift test --no-parallel
+
+  # The Mac half, deliberately not on by default.
+  #
+  # GitHub bills macOS minutes at ten times the Linux rate against a 2,000-minute
+  # monthly allowance, so running this on every push would consume the whole
+  # budget on a shell whose logic was already tested above. Trigger it by hand
+  # when the UIKit layer changes.
+  #
+  # The signed, installable build — the one that reaches TestFlight, and the one
+  # the Sprint 03 kill gate depends on — comes from Codemagic instead
+  # (shells/ios/codemagic.yaml), which has an education tier. Once the shell
+  # moves to its own public repository, macOS minutes become unmetered and this
+  # can run on every pull request; see ADR 0002.
+  app:
+    name: ShellApp build (macOS)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: shells/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build for the simulator
+        run: >
+          xcodebuild build
+          -project Shellwright.xcodeproj
+          -scheme Shellwright
+          -destination 'platform=iOS Simulator,name=iPhone 16'
+          CODE_SIGNING_ALLOWED=NO
+          | xcpretty && exit "${PIPESTATUS[0]}"

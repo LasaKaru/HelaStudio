@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.shellwright.dev/appconfig/v1.json",
+  "schemaVersion": 1,
+  "app": {
+    "name": "@Bob's \"Diner\" & Grill <$5",
+    "bundleId": "com.bobs.diner",
+    "initialUrl": "https://order.bobs.example/",
+    "allowedOrigins": ["https://order.bobs.example"]
+  },
+  "linkRules": [
+    { "id": "internal", "pattern": "^https://order\\.bobs\\.example", "action": "internal" },
+    { "id": "fallback", "pattern": ".*", "action": "externalBrowser" }
+  ],
+  "deepLinks": {
+    "universalLinks": ["order.bobs.example", "a.bobs.example", "m.bobs.example"],
+    "customScheme": "bobs"
+  }
+}

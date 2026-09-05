@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Long</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .marker {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #b45309;
+        color: #fff;
+        font-weight: 600;
+      }
+      nav a {
+        margin-right: 12px;
+      }
+      .tall {
+        height: 200vh;
+        background: linear-gradient(#eee, #999);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/">Home</a><a href="/orders.html">Orders</a> <a href="/account.html">Account</a
+      ><a href="/long.html">Long page</a>
+      <a href="https://example.com/">External link</a>
+    </nav>
+    <h1>Long</h1>
+    <p class="marker">LONG</p>
+    <p>Scroll target for pull-to-refresh and scroll-restoration tests.</p>
+    <div class="tall"></div>
+    <p id="bottom">Bottom of the long page.</p>
+  </body>
+</html>

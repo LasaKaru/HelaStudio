@@ -1,0 +1,71 @@
+# ── Node / pnpm / turbo ────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+coverage/
+.vite/
+.eslintcache
+
+# ── .NET ───────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+TestResults/
+BenchmarkDotNet.Artifacts/
+.vs/
+
+# ── Android ────────────────────────────────────────────────────────────
+.gradle/
+.kotlin/
+local.properties
+captures/
+*.hprof
+.cxx/
+
+# ── iOS / Xcode ────────────────────────────────────────────────────────
+DerivedData/
+Pods/
+*.xcuserdatad/
+*.xcworkspace/xcuserdata/
+.swiftpm/
+# SwiftPM's build tree. Note this is `.build`, not the `build/` above — the
+# leading dot makes it a different name, and without this line a `swift build`
+# leaves several thousand files staged.
+.build/
+# Generated from project.yml by XcodeGen, never committed: a .pbxproj is a merge
+# conflict generator, and Sprint 04 generates one from a config anyway.
+*.xcodeproj/
+
+# ── Secrets & signing material — never, under any circumstance ─────────
+*.p8
+*.p12
+*.pem
+*.key
+*.keystore
+*.jks
+*.mobileprovision
+.env
+.env.*
+!.env.example
+secrets/
+
+# ── OS / editor ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ── Verify (snapshot testing) rejected output ──────────────────────────
+*.received.*
+
+# ── Android SDK location, machine-specific ────────────────────────────
+shells/*/local.properties
+
+# The Gradle wrapper jar is committed on purpose: it pins the Gradle version
+# and its checksum, so CI builds with exactly what a developer builds with.
+!shells/android/gradle/wrapper/gradle-wrapper.jar
