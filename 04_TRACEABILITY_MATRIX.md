@@ -442,12 +442,25 @@ starts second pulls the schema out from under the first — producing failures
 that read like real defects in the code under test rather than like two suites
 fighting.
 
-`dotnet test` on the solution serialises these two projects, so this does not
-arise in CI; it arises when somebody runs the two suites side by side, which is
-an ordinary thing to do. The API suite uses `shellwright_test`; the orchestrator
-suite uses `shellwright_orchestrator_test` and deliberately ignores the
+The API suite uses `shellwright_test`; the orchestrator suite uses
+`shellwright_orchestrator_test` and deliberately ignores the
 `SHELLWRIGHT_TEST_PG_*` variables, which name the API's database. Override it
 alone with `SHELLWRIGHT_TEST_ORCHESTRATOR_PG_RUNNER` and `..._MIGRATOR`.
+
+⚠️ This paragraph previously claimed that "`dotnet test` on the solution
+serialises these two projects, so this does not arise in CI". That was never
+checked and is false: `dotnet test` runs a solution's projects **in parallel**,
+so both fixtures reach `scripts/dev-postgres.sh` within milliseconds of each
+other. Both saw no cluster, both called `pg_ctl`, one won the postmaster lock
+and the other exited 1 — failing every test in the losing suite with "pg_ctl
+failed", which reads like a broken fixture rather than like two scripts
+fighting. It broke the nightly build intermittently for as long as there have
+been two suites, and the claim above is what made nobody look there.
+
+Both setup scripts now serialise their start-up behind an atomic `mkdir` lock,
+keyed on the port, held across role creation as well — because `CREATE ROLE` is
+a check-then-act too. Six concurrent cold starts of each script now all
+succeed; before the lock, three of four failed.
 
 ⚠️ The API suite needs a real PostgreSQL and will not run without one. The
 fixture starts a cluster itself when no connection strings are in the

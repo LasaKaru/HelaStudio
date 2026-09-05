@@ -30,20 +30,54 @@ public sealed class TemporalFixture : IAsyncLifetime
     public WorkflowEnvironment Server =>
         environment ?? throw new InvalidOperationException("The Temporal server has not started.");
 
+    /// <summary>How many times to try starting the dev server.</summary>
+    /// <remarks>
+    /// ⚠️ Not a way of tolerating a broken server, and not a substitute for
+    /// diagnosis. The SDK waits a fixed five seconds for the dev server to
+    /// accept a connection and that budget is not settable from
+    /// <see cref="WorkflowEnvironmentStartLocalOptions"/> — it lives in the
+    /// SDK's core. Five seconds is ample on an idle machine and is not ample
+    /// when <c>dotnet test</c> starts four test projects at once and one of
+    /// them is running <c>initdb</c>, which is exactly what the nightly job
+    /// does. That was observed here, once, on a cold parallel start: ten
+    /// workflow tests failed together with "Connection refused".
+    ///
+    /// A third attempt that still cannot connect is a real failure and is
+    /// allowed to surface as one.
+    /// </remarks>
+    private const int StartAttempts = 3;
+
     /// <inheritdoc />
-    public async Task InitializeAsync() =>
-        environment = await WorkflowEnvironment.StartLocalAsync(new WorkflowEnvironmentStartLocalOptions
+    public async Task InitializeAsync()
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            // ⚠️ Reuse a Temporal binary that is already on PATH rather than
-            // fetching one. Left to itself the SDK downloads about 40 MB on
-            // first use, which means every CI run pays for it, the suite cannot
-            // run offline, and a bad day at the download host looks like a test
-            // failure. `temporal` is installed by scripts/dev-temporal.sh and by
-            // the CI workflow.
-            DevServerOptions = ExistingBinary() is { } path
-                ? new DevServerOptions { ExistingPath = path }
-                : new DevServerOptions(),
-        });
+            try
+            {
+                environment = await WorkflowEnvironment.StartLocalAsync(
+                    new WorkflowEnvironmentStartLocalOptions
+                    {
+                        // ⚠️ Reuse a Temporal binary that is already on PATH rather than
+                        // fetching one. Left to itself the SDK downloads about 40 MB on
+                        // first use, which means every CI run pays for it, the suite cannot
+                        // run offline, and a bad day at the download host looks like a test
+                        // failure. `temporal` is installed by scripts/dev-temporal.sh and by
+                        // the CI workflow.
+                        DevServerOptions = ExistingBinary() is { } path
+                            ? new DevServerOptions { ExistingPath = path }
+                            : new DevServerOptions(),
+                    });
+
+                return;
+            }
+            catch (InvalidOperationException) when (attempt < StartAttempts)
+            {
+                // The machine is busy, not broken. Give the previous attempt's
+                // process time to exit before claiming its port again.
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+    }
 
     /// <summary>Finds a Temporal CLI already installed, if there is one.</summary>
     /// <returns>The path, or null to let the SDK fetch its own.</returns>

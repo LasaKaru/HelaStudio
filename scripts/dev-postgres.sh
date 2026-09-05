@@ -39,6 +39,53 @@ fi
 
 say() { printf '%s\n' "$1" >&2; }
 
+# ⚠️ Starting the cluster is a check-then-act, and two test suites run it at
+# the same time.
+#
+# `dotnet test` on the solution runs its projects in parallel, so the API suite
+# and the orchestrator suite both reach this script within milliseconds of each
+# other. Both see no cluster running, both call pg_ctl, one wins the postmaster
+# lock and the other exits 1 — and every test in the losing suite fails with
+# "pg_ctl failed", which reads exactly like a broken fixture rather than like
+# two scripts fighting. It broke the nightly build, intermittently, for as long
+# as there have been two suites.
+#
+# mkdir rather than flock: it is atomic on every POSIX filesystem and needs no
+# util-linux, so this behaves the same on a developer's Mac as on a runner.
+#
+# Keyed on the port rather than the data directory, because the port is what
+# identifies the cluster, and the cluster is what is contended — including by
+# the role creation below, which runs even when the server is a CI service
+# container and no data directory is ours at all.
+lock="${TMPDIR:-/tmp}/shellwright-pg-$port.lock"
+
+release_lock() { rmdir "$lock" 2>/dev/null || true; }
+
+acquire_lock() {
+	local waited=0
+
+	until mkdir "$lock" 2>/dev/null; do
+		# A lock left behind by a killed process would otherwise block every
+		# future run for ever, which is a worse failure than the race.
+		if [[ -n "$(find "$lock" -maxdepth 0 -mmin +5 2>/dev/null)" ]]; then
+			say "Removing a stale lock at $lock"
+			rmdir "$lock" 2>/dev/null || true
+			continue
+		fi
+
+		sleep 1
+		waited=$((waited + 1))
+
+		if [[ "$waited" -gt 120 ]]; then
+			say "Timed out waiting for $lock. Remove it if no other run is starting Postgres."
+			return 1
+		fi
+	done
+
+	trap release_lock EXIT
+	return 0
+}
+
 find_bindir() {
 	if command -v initdb >/dev/null 2>&1; then
 		dirname "$(command -v initdb)"
@@ -83,12 +130,19 @@ fi
 
 admin="${SHELLWRIGHT_PG_ADMIN:-}"
 
+# ⚠️ Held for the rest of the script, not just across the start. The three roles
+# are cluster-wide and their creation is a check-then-act too: two suites racing
+# there both see the role missing and one fails with "role already exists".
+acquire_lock || exit 1
+
 if [[ -z "$admin" ]]; then
 	bindir=$(find_bindir) || {
 		say "No Postgres server binaries found. Install postgresql-16 or set SHELLWRIGHT_PG_ADMIN."
 		exit 1
 	}
 
+	# Re-checked inside the lock. The whole point of the lock is that the
+	# answer can have changed between the caller arriving and getting in.
 	if ! run_pg "$bindir/pg_ctl -D $data status" >/dev/null 2>&1; then
 		if [[ ! -s "$data/PG_VERSION" ]]; then
 			say "Initialising a cluster in $data"
@@ -108,8 +162,13 @@ if [[ -z "$admin" ]]; then
 
 		say "Starting Postgres on port $port"
 		run_pg "$bindir/pg_ctl -D $data -o '-p $port -k /tmp -c listen_addresses=127.0.0.1' -l $data/server.log start" >/dev/null 2>&1 || {
-			say "pg_ctl failed; see $data/server.log"
-			exit 1
+			# Belt and braces: if a stale lock was cleared above, somebody else
+			# may still have started it. A cluster that is up is the outcome we
+			# wanted, however it got there.
+			if ! run_pg "$bindir/pg_ctl -D $data status" >/dev/null 2>&1; then
+				say "pg_ctl failed; see $data/server.log"
+				exit 1
+			fi
 		}
 	fi
 
@@ -162,6 +221,11 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shellwright_runner') THEN
         CREATE ROLE shellwright_runner LOGIN PASSWORD 'shellwright_runner' NOBYPASSRLS NOINHERIT;
     END IF;
+EXCEPTION
+    -- Defence in depth behind the lock above. CREATE ROLE is not atomic with
+    -- its own existence check, so a caller that got here without the lock must
+    -- not turn "somebody else already made it" into a failed test run.
+    WHEN duplicate_object THEN NULL;
 END
 \$\$;
 SQL
@@ -185,4 +249,7 @@ echo "export SHELLWRIGHT_TEST_PG_APP='$base;Username=shellwright_app;Password=sh
 echo "export SHELLWRIGHT_TEST_PG_MIGRATOR='$base;Username=shellwright_migrator;Password=shellwright_migrator'"
 echo "export SHELLWRIGHT_TEST_PG_RUNNER='$base;Username=shellwright_runner;Password=shellwright_runner'"
 echo "export SHELLWRIGHT_TEST_PG_ADMIN='Host=$host;Port=$pgport;Database=postgres;Username=$adminuser${adminpass:+;Password=$adminpass}'"
+release_lock
+trap - EXIT
+
 say "Ready: $database on $host:$pgport"

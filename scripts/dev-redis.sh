@@ -18,6 +18,36 @@ fi
 
 command -v redis-server >/dev/null || { say "redis-server is not installed."; exit 1; }
 
+# ⚠️ The same check-then-act race as scripts/dev-postgres.sh, and the same fix.
+# `dotnet test` runs the solution's projects in parallel, so two callers can
+# both find no server and both start one; the loser binds nothing and the suite
+# that asked for it fails. mkdir is atomic on every POSIX filesystem, so this
+# needs no util-linux and behaves the same on a Mac.
+lock="${TMPDIR:-/tmp}/shellwright-redis-$port.lock"
+
+release_lock() { rmdir "$lock" 2>/dev/null || true; }
+
+waited=0
+until mkdir "$lock" 2>/dev/null; do
+	# A lock left by a killed process must not block every future run.
+	if [[ -n "$(find "$lock" -maxdepth 0 -mmin +5 2>/dev/null)" ]]; then
+		say "Removing a stale lock at $lock"
+		rmdir "$lock" 2>/dev/null || true
+		continue
+	fi
+
+	sleep 1
+	waited=$((waited + 1))
+
+	if [[ "$waited" -gt 120 ]]; then
+		say "Timed out waiting for $lock. Remove it if no other run is starting Redis."
+		exit 1
+	fi
+done
+
+trap release_lock EXIT
+
+# Re-checked inside the lock: the answer can have changed while we waited.
 if redis-cli -p "$port" ping >/dev/null 2>&1; then
 	echo "export SHELLWRIGHT_TEST_REDIS='127.0.0.1:$port'"
 	say "Already running on port $port"
